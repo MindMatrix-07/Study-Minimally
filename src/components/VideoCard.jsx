@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 
 const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
-    // Styles for LIST view
     const isList = viewMode === 'list';
 
     return (
@@ -11,29 +10,32 @@ const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
             whileHover={{ scale: isList ? 1.01 : 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
+            className={isList ? 'video-card-list' : ''}
             style={{
                 cursor: 'pointer',
                 backgroundColor: '#1a1a1e',
                 borderRadius: '12px',
                 overflow: 'hidden',
                 boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                display: isList ? 'flex' : 'block', // Flex for horizontal
+                display: isList ? 'flex' : 'block',
                 gap: isList ? '16px' : '0',
                 height: isList ? '140px' : 'auto',
             }}
         >
-            <div style={{
-                position: 'relative',
-                width: isList ? '240px' : '100%',
-                paddingTop: isList ? '0' : '56.25%', // Aspect ratio hack only for grid
-                height: isList ? '100%' : '0',
-                flexShrink: 0
-            }}>
+            <div
+                className={isList ? 'video-card-list-img' : ''}
+                style={{
+                    position: 'relative',
+                    width: isList ? '240px' : '100%',
+                    paddingTop: isList ? '0' : '56.25%',
+                    height: isList ? '100%' : '0',
+                    flexShrink: 0
+                }}>
                 <img
                     src={video.thumbnail}
                     alt={video.title}
                     style={{
-                        position: isList ? 'relative' : 'absolute',
+                        position: isList ? 'absolute' : 'absolute', // Always absolute for proper fill in forced aspect ratio containers
                         top: 0,
                         left: 0,
                         width: '100%',
@@ -41,7 +43,6 @@ const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
                         objectFit: 'cover'
                     }}
                 />
-                {/* Live Badge */}
                 {video.isLive && (
                     <div style={{
                         position: 'absolute', bottom: '8px', right: '8px',
@@ -53,7 +54,7 @@ const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
                 )}
             </div>
 
-            <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div className={isList ? 'video-card-list-content' : ''} style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <h3 style={{
                     fontSize: '14px',
                     margin: '0 0 8px 0',

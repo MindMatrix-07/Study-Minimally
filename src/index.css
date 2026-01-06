@@ -1,36 +1,112 @@
 :root {
-  --bg-color: #0f0f11;
-  --card-bg: #1a1a1e;
-  --primary: #646cff;
-  --text-main: #ffffff;
-  --text-dim: #a1a1aa;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #0c0c0e;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
+  min-width: 320px;
+  min-height: 100vh;
 }
 
 * {
   box-sizing: border-box;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--bg-color);
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
+/* --- RESPONSIVE LAYOUTS --- */
+
+/* Responsive Grid for Video Cards */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
+/* List View Layout */
+.list-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Watch Page Layout: Side-by-Side on Desktop, Stacked on Mobile */
+.watch-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Feed Filters Row */
+.filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+/* Mobile Breakpoints */
+@media (max-width: 800px) {
+  .watch-layout {
+    grid-template-columns: 1fr;
+    /* Stack vertically */
+  }
+}
+
+@media (max-width: 600px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+    /* Single column */
+    gap: 16px;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .filters-row>div {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Adjust list view card for mobile */
+  .video-card-list {
+    height: auto !important;
+    flex-direction: column !important;
+    /* Stack image/text */
+  }
+
+  .video-card-list-img {
+    width: 100% !important;
+    padding-top: 56.25% !important;
+    /* Force aspect ratio */
+    height: 0 !important;
+  }
+
+  .video-card-list-content {
+    padding: 12px 0 0 0 !important;
+  }
 }
