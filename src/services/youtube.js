@@ -25,7 +25,7 @@ export const CHANNELS = {
   },
 };
 
-// Cache to store upload playlist IDs to save quota
+// Cache to store upload playlist IDs
 const UPLOAD_PLAYLIST_CACHE = {};
 
 const getUploadsPlaylistId = async (channelId) => {
@@ -49,9 +49,10 @@ const getUploadsPlaylistId = async (channelId) => {
   }
 };
 
-export const fetchChannelVideos = async (channelId, maxResults = 10) => {
+// Fetch standard uploads (The "Videos" Tab)
+export const fetchChannelVideos = async (channelId, pageToken = '', maxResults = 12) => {
   const playlistId = await getUploadsPlaylistId(channelId);
-  if (!playlistId) return [];
+  if (!playlistId) return { items: [], nextPageToken: null };
 
   try {
     const response = await client.get('/playlistItems', {
@@ -59,26 +60,70 @@ export const fetchChannelVideos = async (channelId, maxResults = 10) => {
         playlistId: playlistId,
         part: 'snippet,contentDetails',
         maxResults: maxResults,
+        pageToken: pageToken
       },
     });
 
-    // Transform to a standard format
-    return response.data.items.map(item => ({
+    const items = response.data.items.map(item => ({
       id: item.contentDetails.videoId,
       title: item.snippet.title,
       thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
       channelTitle: item.snippet.channelTitle,
       publishedAt: item.snippet.publishedAt,
       channelId: item.snippet.channelId,
-      description: item.snippet.description, // Added description
+      description: item.snippet.description,
+      kind: 'video'
     }));
+
+    return {
+      items,
+      nextPageToken: response.data.nextPageToken
+    };
   } catch (error) {
     console.error('Error fetching videos:', error);
-    return [];
+    return { items: [], nextPageToken: null };
   }
 };
 
-export const fetchLiveStreams = async (channelId) => {
+// Fetch Past Live Streams (The "Live" Tab - Archives)
+export const fetchLiveArchives = async (channelId, pageToken = '') => {
+  try {
+    const response = await client.get('/search', {
+      params: {
+        channelId: channelId,
+        part: 'snippet',
+        eventType: 'completed', // Past live streams
+        type: 'video',
+        order: 'date',
+        maxResults: 12,
+        pageToken: pageToken
+      },
+    });
+
+    const items = response.data.items.map(item => ({
+      id: item.id.videoId,
+      title: item.snippet.title,
+      thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+      channelTitle: item.snippet.channelTitle,
+      publishedAt: item.snippet.publishedAt,
+      channelId: item.snippet.channelId,
+      description: item.snippet.description,
+      isLiveArchive: true,
+      kind: 'live'
+    }));
+
+    return {
+      items,
+      nextPageToken: response.data.nextPageToken
+    };
+  } catch (error) {
+    console.error('Error fetching live archives:', error);
+    return { items: [], nextPageToken: null };
+  }
+};
+
+// Fetch Currently Active Live Streams
+export const fetchActiveLive = async (channelId) => {
   try {
     const response = await client.get('/search', {
       params: {
@@ -98,9 +143,10 @@ export const fetchLiveStreams = async (channelId) => {
       isLive: true,
       channelId: item.snippet.channelId,
       description: item.snippet.description,
+      kind: 'live'
     }));
   } catch (error) {
-    console.error('Error fetching live streams:', error);
+    console.error('Error fetching active live streams:', error);
     return [];
   }
 };

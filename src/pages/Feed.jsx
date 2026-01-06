@@ -1,65 +1,127 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CHANNELS, fetchChannelVideos, fetchLiveStreams } from '../services/youtube';
+import { CHANNELS, fetchChannelVideos, fetchLiveArchives, fetchActiveLive } from '../services/youtube';
 import VideoCard from '../components/VideoCard';
 
 const Feed = () => {
     const [activeChannel, setActiveChannel] = useState('ALL');
     const [activeTab, setActiveTab] = useState('ALL_CONTENT'); // ALL_CONTENT, VIDEOS, LIVE
+
     const [videos, setVideos] = useState([]);
+    const [pageToken, setPageToken] = useState(null); // Token for the next page
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const loadContent = async () => {
-            setLoading(true);
-            let allVideos = [];
+    // Helper to determine which channels to query
+    const getTargetChannels = useCallback(() => {
+        return activeChannel === 'ALL'
+            ? Object.values(CHANNELS)
+            : Object.values(CHANNELS).filter(c => c.name === activeChannel);
+    }, [activeChannel]);
 
-            const channelsToFetch = activeChannel === 'ALL'
-                ? Object.values(CHANNELS)
-                : Object.values(CHANNELS).filter(c => c.name === activeChannel);
+    // Initial Data Load (Reset)
+    useEffect(() => {
+        const loadInitial = async () => {
+            setLoading(true);
+            setVideos([]);
+            setPageToken(null);
+
+            const channels = getTargetChannels();
+            let combinedItems = [];
+            let nextTokens = {}; // Store tokens per channel if needed, for simplicity we might just grab the first valid one or parallel fetch
 
             try {
-                const promises = channelsToFetch.map(async (channel) => {
+                const promises = channels.map(async (channel) => {
                     let results = [];
 
-                    if (activeTab === 'LIVE' || activeTab === 'ALL_CONTENT') {
-                        const live = await fetchLiveStreams(channel.id);
-                        results = [...results, ...live];
-                    }
+                    // Fetch Logic based on Tab
+                    if (activeTab === 'LIVE') {
+                        // 1. Get Active Live (Always show these at top)
+                        const active = await fetchActiveLive(channel.id);
+                        // 2. Get Past Live (Archives)
+                        const { items: past, nextPageToken } = await fetchLiveArchives(channel.id);
+                        results = [...active, ...past];
 
-                    if (activeTab === 'VIDEOS' || activeTab === 'ALL_CONTENT') {
-                        const uploads = await fetchChannelVideos(channel.id, 12);
-                        results = [...results, ...uploads];
-                    }
+                        // We only handle pagination for single channel roughly or complex merge
+                        return { items: results, token: nextPageToken };
+                    } else {
+                        // VIDEOS or ALL (Defaulting 'ALL' to just Videos stream for now to keep it clean, or mix?)
+                        // The user wants "Video Section" and "Live Section". 
+                        // Let's treat 'ALL_CONTENT' as 'VIDEOS' for pagination simplicity, or just mix.
+                        // Defaulting ALL -> Videos + maybe show separate Live section? 
+                        // Simplified: ALL_CONTENT = Videos Tab logic (Standard uploads)
 
-                    return results;
+                        const { items, nextPageToken } = await fetchChannelVideos(channel.id);
+                        return { items, token: nextPageToken };
+                    }
                 });
 
-                const results = await Promise.all(promises);
-                allVideos = results.flat().sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+                const responses = await Promise.all(promises);
 
-                // Remove duplicates
-                const seen = new Set();
-                allVideos = allVideos.filter(v => {
-                    if (seen.has(v.id)) return false;
-                    seen.add(v.id);
-                    return true;
+                // Merge
+                responses.forEach(r => {
+                    combinedItems = [...combinedItems, ...r.items];
                 });
 
+                // Store one of the tokens for pagination (Naive implementation for multi-channel: just uses the first channel's token if single channel selected. 
+                // Real multi-channel pagination is complex; we will disable specific "Load More" for 'ALL' channels if it gets too messy, 
+                // OR just save the tokens map. For this scope, we'll try to support it if single channel, otherwise just first page.)
+                if (channels.length === 1) {
+                    setPageToken(responses[0].token);
+                } else {
+                    setPageToken(null); // Disable pagination for 'All Channels' view to prevent complexity or API chaos
+                }
+
+                // Sort by date
+                combinedItems.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+                setVideos(combinedItems);
             } catch (err) {
-                console.error("Failed to load videos", err);
+                console.error("Failed to load content", err);
             } finally {
-                setVideos(allVideos);
                 setLoading(false);
             }
         };
 
-        loadContent();
-    }, [activeChannel, activeTab]);
+        loadInitial();
+    }, [activeChannel, activeTab, getTargetChannels]);
+
+    // Load More Handler
+    const handleLoadMore = async () => {
+        if (!pageToken || loadingMore) return;
+        setLoadingMore(true);
+
+        const channels = getTargetChannels();
+        // Only support single channel pagination reliably for now
+        const channel = channels[0];
+
+        try {
+            let newItems = [];
+            let newToken = null;
+
+            if (activeTab === 'LIVE') {
+                const result = await fetchLiveArchives(channel.id, pageToken);
+                newItems = result.items;
+                newToken = result.nextPageToken;
+            } else {
+                const result = await fetchChannelVideos(channel.id, pageToken);
+                newItems = result.items;
+                newToken = result.nextPageToken;
+            }
+
+            setVideos(prev => [...prev, ...newItems]);
+            setPageToken(newToken);
+        } catch (err) {
+            console.error("Failed to load more", err);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     return (
-        <div>
+        <div style={{ paddingBottom: '40px' }}>
             {/* Mobile Design: Stacked filters */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                 {/* Channel Filters */}
@@ -86,11 +148,6 @@ const Feed = () => {
                     <TabButton
                         active={activeTab === 'ALL_CONTENT'}
                         onClick={() => setActiveTab('ALL_CONTENT')}
-                        label="Home"
-                    />
-                    <TabButton
-                        active={activeTab === 'VIDEOS'}
-                        onClick={() => setActiveTab('VIDEOS')}
                         label="Videos"
                     />
                     <TabButton
@@ -104,26 +161,49 @@ const Feed = () => {
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#a1a1aa' }}>Loading content...</div>
             ) : (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: '24px',
-                    // Mobile adjustment
-                    '@media (max-width: 600px)': {
-                        gridTemplateColumns: '1fr'
-                    }
-                }}>
-                    {videos.map(video => (
-                        <VideoCard
-                            key={video.id}
-                            video={video}
-                            onClick={() => navigate(`/watch/${video.id}`)}
-                        />
-                    ))}
-                    {videos.length === 0 && !loading && (
-                        <div style={{ color: '#555', gridColumn: '1 / -1', textAlign: 'center' }}>No videos found for this filter.</div>
+                <>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: '24px',
+                        '@media (max-width: 600px)': { gridTemplateColumns: '1fr' }
+                    }}>
+                        {videos.map(video => (
+                            <VideoCard
+                                key={video.id}
+                                video={video}
+                                onClick={() => navigate(`/watch/${video.id}`)}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Load More Button - Only shows if we have a token (Single Channel Mode mostly) */}
+                    {pageToken && (
+                        <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                            <button
+                                onClick={handleLoadMore}
+                                disabled={loadingMore}
+                                style={{
+                                    background: '#2a2a35',
+                                    border: '1px solid #3f3f46',
+                                    color: 'white',
+                                    padding: '12px 32px',
+                                    borderRadius: '24px',
+                                    cursor: loadingMore ? 'wait' : 'pointer',
+                                    transition: 'background 0.2s'
+                                }}
+                            >
+                                {loadingMore ? 'Loading...' : 'Load More'}
+                            </button>
+                        </div>
                     )}
-                </div>
+
+                    {!pageToken && activeChannel !== 'ALL' && videos.length > 0 && (
+                        <div style={{ textAlign: 'center', marginTop: '40px', color: '#555' }}>
+                            You've reached the end.
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
@@ -159,7 +239,7 @@ const TabButton = ({ active, onClick, label }) => (
             border: 'none',
             borderBottom: active ? '2px solid #646cff' : '2px solid transparent',
             color: active ? 'white' : '#71717a',
-            padding: '8px 4px',
+            padding: '8px 12px',
             cursor: 'pointer',
             fontWeight: active ? '600' : '400',
             fontSize: '15px'
