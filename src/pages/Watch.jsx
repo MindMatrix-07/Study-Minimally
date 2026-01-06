@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import YouTube from 'react-youtube';
-import { FaArrowLeft, FaRobot, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeSlash } from 'react-icons/fa';
+import { FaArrowLeft, FaRobot, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeSlash, FaDownload } from 'react-icons/fa';
 import { trackHeartbeat } from '../services/tracker';
 import { fetchVideoDetails, fetchComments, fetchLiveChatMessages } from '../services/youtube';
 import { analyzeComments } from '../services/gemini';
@@ -103,6 +103,12 @@ const Watch = () => {
     const handleResume = () => playerRef.current?.playVideo();
     const handleReplay = () => { playerRef.current?.seekTo(0); playerRef.current?.playVideo(); };
 
+    // External Download
+    const handleDownload = () => {
+        // Open a reputable external downloader in new tab
+        window.open(`https://www.y2mate.com/youtube/${id}`, '_blank');
+    };
+
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '40px' }}>
             <button
@@ -162,9 +168,9 @@ const Watch = () => {
                         background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)',
                         borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
                         display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 10,
-                        pointerEvents: 'none' // Let clicks pass through if needed, but we want scroll usually. Actually, better pointer-events-auto for scroll.
+                        pointerEvents: 'auto'
                     }}>
-                        <div style={{ pointerEvents: 'auto', flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="scrollbar-hide">
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="scrollbar-hide">
                             {liveChatMessages.length === 0 && <div style={{ fontSize: '12px', color: '#a1a1aa' }}>Connecting to chat...</div>}
                             {liveChatMessages.map(msg => (
                                 <div key={msg.id} style={{ fontSize: '13px', textShadow: '0 1px 2px black' }}>
@@ -196,9 +202,27 @@ const Watch = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '24px', alignItems: 'start' }}>
                 <div>
                     <h1 style={{ fontSize: '20px', margin: '0 0 12px 0', lineHeight: 1.4 }}>{details?.snippet?.title || 'Loading...'}</h1>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a1a1aa', fontSize: '14px', marginBottom: '24px' }}>
-                        <span>{details?.snippet?.channelTitle}</span>
-                        <span>{details?.statistics?.viewCount ? parseInt(details.statistics.viewCount).toLocaleString() : 0} views</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                        <div style={{ display: 'flex', gap: '16px', color: '#a1a1aa', fontSize: '14px' }}>
+                            <span style={{ color: 'white' }}>{details?.snippet?.channelTitle}</span>
+                            <span>{details?.statistics?.viewCount ? parseInt(details.statistics.viewCount).toLocaleString() : 0} views</span>
+                        </div>
+
+                        {/* Download Action */}
+                        <button
+                            onClick={handleDownload}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none',
+                                padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px',
+                                transition: 'background 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                        >
+                            <FaDownload /> Download
+                        </button>
                     </div>
 
                     <div style={{ background: '#1a1a1e', padding: '16px', borderRadius: '12px', marginBottom: '32px' }}>
