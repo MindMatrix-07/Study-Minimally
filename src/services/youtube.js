@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
-// ... (Client setup remains same, re-outputting full file for clarity/correctness)
+// ... (Client setup remains same)
 const client = axios.create({
   baseURL: BASE_URL,
   params: { key: API_KEY },
@@ -14,7 +14,7 @@ export const CHANNELS = {
   XYLEM: { id: 'UCaQhwo6un90JE2nDGdtJIIw', name: 'Xylem JEE & KEAM 2026' },
 };
 
-// --- VIDEO & LIVE FETCHING (Existing) ---
+// --- VIDEO & LIVE FETCHING ---
 const UPLOAD_PLAYLIST_CACHE = {};
 const getUploadsPlaylistId = async (channelId) => {
   if (UPLOAD_PLAYLIST_CACHE[channelId]) return UPLOAD_PLAYLIST_CACHE[channelId];
@@ -89,18 +89,11 @@ export const fetchActiveLive = async (channelId) => {
 };
 
 // --- PLAYLISTS ---
-
 export const fetchChannelPlaylists = async (channelId, pageToken = '') => {
   try {
     const response = await client.get('/playlists', {
-      params: {
-        channelId,
-        part: 'snippet,contentDetails',
-        maxResults: 12,
-        pageToken
-      }
+      params: { channelId, part: 'snippet,contentDetails', maxResults: 12, pageToken }
     });
-
     const items = response.data.items.map(item => ({
       id: item.id,
       title: item.snippet.title,
@@ -110,25 +103,15 @@ export const fetchChannelPlaylists = async (channelId, pageToken = '') => {
       publishedAt: item.snippet.publishedAt,
       kind: 'playlist'
     }));
-
     return { items, nextPageToken: response.data.nextPageToken };
-  } catch (error) {
-    console.error('Error fetching playlists:', error);
-    return { items: [], nextPageToken: null };
-  }
+  } catch (error) { console.error('Error fetching playlists:', error); return { items: [], nextPageToken: null }; }
 };
 
 export const fetchPlaylistItems = async (playlistId, pageToken = '') => {
   try {
     const response = await client.get('/playlistItems', {
-      params: {
-        playlistId,
-        part: 'snippet,contentDetails',
-        maxResults: 50, // Get many items for a playlist view
-        pageToken
-      }
+      params: { playlistId, part: 'snippet,contentDetails', maxResults: 50, pageToken }
     });
-
     const items = response.data.items.map(item => ({
       id: item.contentDetails.videoId,
       title: item.snippet.title,
@@ -139,31 +122,23 @@ export const fetchPlaylistItems = async (playlistId, pageToken = '') => {
       description: item.snippet.description,
       kind: 'video'
     }));
-
     return { items, nextPageToken: response.data.nextPageToken };
-  } catch (error) {
-    console.error('Error fetching playlist items:', error);
-    return { items: [], nextPageToken: null };
-  }
+  } catch (error) { console.error('Error fetching playlist items:', error); return { items: [], nextPageToken: null }; }
 };
 
 export const fetchPlaylistDetails = async (playlistId) => {
   try {
-    const response = await client.get('/playlists', {
-      params: { id: playlistId, part: 'snippet' }
-    });
+    const response = await client.get('/playlists', { params: { id: playlistId, part: 'snippet' } });
     return response.data.items[0];
-  } catch (error) {
-    return null;
-  }
+  } catch (error) { return null; }
 }
 
-// --- DETAILS & COMMENTS ---
+// --- DETAILS, COMMENTS & LIVE CHAT ---
 
 export const fetchVideoDetails = async (videoId) => {
   try {
     const response = await client.get('/videos', {
-      params: { id: videoId, part: 'snippet,statistics' }
+      params: { id: videoId, part: 'snippet,statistics,liveStreamingDetails' }
     });
     return response.data.items[0];
   } catch (error) { return null; }
@@ -182,5 +157,28 @@ export const fetchComments = async (videoId) => {
       publishedAt: item.snippet.topLevelComment.snippet.publishedAt,
       authorImage: item.snippet.topLevelComment.snippet.authorProfileImageUrl
     }));
-  } catch (error) { console.error("Error fetching comments", error); return []; }
+  } catch (error) { return []; }
+}
+
+// Fetch Live Chat
+export const fetchLiveChatMessages = async (liveChatId) => {
+  try {
+    const response = await client.get('/liveChat/messages', {
+      params: {
+        liveChatId,
+        part: 'snippet,authorDetails',
+        maxResults: 10 // don't overwhelm
+      }
+    });
+    return response.data.items.map(item => ({
+      id: item.id,
+      author: item.authorDetails.displayName,
+      message: item.snippet.displayMessage,
+      authorImage: item.authorDetails.profileImageUrl,
+      publishedAt: item.snippet.publishedAt
+    }));
+  } catch (error) {
+    console.error("Error fetching live chat", error);
+    return [];
+  }
 }

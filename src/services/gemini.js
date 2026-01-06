@@ -16,21 +16,21 @@ export const analyzeComments = async (comments) => {
     }
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // Switched to gemini-1.5-flash for speed and reliability
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // Prepare prompt
         const commentsText = comments.map(c => `- ${c.author}: ${c.text}`).join('\n');
         const prompt = `
     Analyze these YouTube comments for an educational video.
     
-    1. Identify the 3 most useful/insightful comments that add value or clarify the topic.
-    2. Provide a 1-sentence summary of the general sentiment/discussion.
+    1. Identify the 3 most useful/insightful comments that add value (e.g., timestamps, summaries, corrections).
+    2. Provide a 1-sentence summary of the general sentiment.
     
     Format the output as JSON:
     {
       "summary": "General sentiment summary...",
       "highlights": [
-        { "author": "User Name", "text": "The specific helpful part of the comment..." }
+        { "author": "User Name", "text": "The specific helpful part..." }
       ]
     }
 
@@ -49,7 +49,7 @@ export const analyzeComments = async (comments) => {
     } catch (error) {
         console.error("Gemini Analysis Failed:", error);
         return {
-            summary: "AI Analysis failed to generate a result.",
+            summary: "AI Analysis currently unavailable.",
             highlights: []
         };
     }
