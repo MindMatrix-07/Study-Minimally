@@ -1,29 +1,39 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaPlayCircle } from 'react-icons/fa';
 import { formatDistanceToNow } from 'date-fns';
 
-const VideoCard = ({ video, onClick }) => {
+const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
+    // Styles for LIST view
+    const isList = viewMode === 'list';
+
     return (
         <motion.div
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: isList ? 1.01 : 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="video-card"
-            onClick={() => onClick(video)}
+            onClick={onClick}
             style={{
                 cursor: 'pointer',
                 backgroundColor: '#1a1a1e',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+                boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                display: isList ? 'flex' : 'block', // Flex for horizontal
+                gap: isList ? '16px' : '0',
+                height: isList ? '140px' : 'auto',
             }}
         >
-            <div style={{ position: 'relative', paddingTop: '56.25%' }}>
+            <div style={{
+                position: 'relative',
+                width: isList ? '240px' : '100%',
+                paddingTop: isList ? '0' : '56.25%', // Aspect ratio hack only for grid
+                height: isList ? '100%' : '0',
+                flexShrink: 0
+            }}>
                 <img
                     src={video.thumbnail}
                     alt={video.title}
                     style={{
-                        position: 'absolute',
+                        position: isList ? 'relative' : 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',
@@ -31,35 +41,37 @@ const VideoCard = ({ video, onClick }) => {
                         objectFit: 'cover'
                     }}
                 />
-                <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0,
-                    transition: 'opacity 0.2s'
-                }} className="hover-overlay">
-                    <FaPlayCircle size={48} color="white" />
-                </div>
+                {/* Live Badge */}
+                {video.isLive && (
+                    <div style={{
+                        position: 'absolute', bottom: '8px', right: '8px',
+                        background: '#ef4444', color: 'white', fontSize: '10px',
+                        fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px'
+                    }}>
+                        LIVE
+                    </div>
+                )}
             </div>
-            <div style={{ padding: '12px' }}>
+
+            <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                 <h3 style={{
                     fontSize: '14px',
                     margin: '0 0 8px 0',
                     lineHeight: '1.4',
                     display: '-webkit-box',
-                    WebkitLineClamp: 2,
+                    WebkitLineClamp: isList ? 1 : 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
                 }}>
                     {video.title}
                 </h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#a1a1aa' }}>
-                    <span>{video.channelTitle}</span>
-                    <span>{video.publishedAt ? formatDistanceToNow(new Date(video.publishedAt), { addSuffix: true }) : ''}</span>
+
+                <div style={{ color: '#a1a1aa', fontSize: '12px', marginTop: 'auto' }}>
+                    <div style={{ marginBottom: '4px', fontWeight: '500' }}>{video.channelTitle}</div>
+                    <div>
+                        {video.publishedAt && formatDistanceToNow(new Date(video.publishedAt), { addSuffix: true })}
+                    </div>
                 </div>
             </div>
         </motion.div>

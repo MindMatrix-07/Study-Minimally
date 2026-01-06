@@ -1,9 +1,11 @@
 import axios from 'axios';
+import { subDays, subMonths, subYears, startOfDay } from 'date-fns';
 
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
-// ... (Client setup remains same)
+if (!API_KEY) console.error('YouTube API Key is missing! Check .env file.');
+
 const client = axios.create({
   baseURL: BASE_URL,
   params: { key: API_KEY },
@@ -14,7 +16,7 @@ export const CHANNELS = {
   XYLEM: { id: 'UCaQhwo6un90JE2nDGdtJIIw', name: 'Xylem JEE & KEAM 2026' },
 };
 
-// --- VIDEO & LIVE FETCHING ---
+// --- HELPERS ---
 const UPLOAD_PLAYLIST_CACHE = {};
 const getUploadsPlaylistId = async (channelId) => {
   if (UPLOAD_PLAYLIST_CACHE[channelId]) return UPLOAD_PLAYLIST_CACHE[channelId];
@@ -26,34 +28,98 @@ const getUploadsPlaylistId = async (channelId) => {
   } catch (error) { console.error('Error fetching channel details:', error); return null; }
 };
 
-export const fetchChannelVideos = async (channelId, pageToken = '', maxResults = 12) => {
-  const playlistId = await getUploadsPlaylistId(channelId);
-  if (!playlistId) return { items: [], nextPageToken: null };
-  try {
-    const response = await client.get('/playlistItems', {
-      params: { playlistId, part: 'snippet,contentDetails', maxResults, pageToken },
-    });
-    const items = response.data.items.map(item => ({
-      id: item.contentDetails.videoId,
-      title: item.snippet.title,
-      thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
-      channelTitle: item.snippet.channelTitle,
-      publishedAt: item.snippet.publishedAt,
-      channelId: item.snippet.channelId,
-      description: item.snippet.description,
-      kind: 'video'
-    }));
-    return { items, nextPageToken: response.data.nextPageToken };
-  } catch (error) { console.error('Error fetching videos:', error); return { items: [], nextPageToken: null }; }
+// Calculate Date String for API (RFC 3339)
+export const getDateFilter = (filterType) => {
+  const now = new Date();
+  let date;
+  if (filterType === 'WEEK') date = subDays(now, 7);
+  else if (filterType === 'MONTH') date = subMonths(now, 1);
+  else if (filterType === 'YEAR') date = subYears(now, 1);
+  else return null;
+
+  return startOfDay(date).toISOString();
 };
 
-export const fetchLiveArchives = async (channelId, pageToken = '') => {
+// --- VIDEOS ---
+// Standard Fetch (Cheap) vs Filtered Fetch (Search API - Expensive)
+export const fetchChannelVideos = async (channelId, pageToken = '', dateFilter = null) => {
   try {
+    const publishedAfter = getDateFilter(dateFilter);
+
+    // If Filtering by Date, we MUST use Search API (cost: 100 units)
+    if (publishedAfter) {
+      const response = await client.get('/search', {
+        params: {
+          channelId,
+          part: 'snippet',
+          type: 'video',
+          order: 'date',
+          publishedAfter,
+          maxResults: 12,
+          pageToken
+        }
+      });
+      const items = response.data.items.map(item => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+        channelId: item.snippet.channelId,
+        description: item.snippet.description,
+        kind: 'video'
+      }));
+      return { items, nextPageToken: response.data.nextPageToken };
+    }
+
+    // Otherwise, use Uploads Playlist (Cheaper: 1 unit)
+    else {
+      const playlistId = await getUploadsPlaylistId(channelId);
+      if (!playlistId) return { items: [], nextPageToken: null };
+
+      const response = await client.get('/playlistItems', {
+        params: {
+          playlistId,
+          part: 'snippet,contentDetails',
+          maxResults: 12,
+          pageToken
+        },
+      });
+      const items = response.data.items.map(item => ({
+        id: item.contentDetails.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+        channelId: item.snippet.channelId,
+        description: item.snippet.description,
+        kind: 'video'
+      }));
+      return { items, nextPageToken: response.data.nextPageToken };
+    }
+  } catch (error) {
+    console.error('Error fetching videos:', error);
+    return { items: [], nextPageToken: null };
+  }
+};
+
+// --- LIVE ARCHIVES ---
+export const fetchLiveArchives = async (channelId, pageToken = '', dateFilter = null) => {
+  try {
+    const publishedAfter = getDateFilter(dateFilter);
     const response = await client.get('/search', {
       params: {
-        channelId, part: 'snippet', eventType: 'completed', type: 'video', order: 'date', maxResults: 12, pageToken
+        channelId,
+        part: 'snippet',
+        eventType: 'completed',
+        type: 'video',
+        order: 'date',
+        maxResults: 12,
+        pageToken,
+        publishedAfter: publishedAfter || undefined
       },
     });
+
     const items = response.data.items.map(item => ({
       id: item.id.videoId,
       title: item.snippet.title,
@@ -65,10 +131,15 @@ export const fetchLiveArchives = async (channelId, pageToken = '') => {
       isLiveArchive: true,
       kind: 'live'
     }));
+
     return { items, nextPageToken: response.data.nextPageToken };
-  } catch (error) { console.error('Error fetching live archives:', error); return { items: [], nextPageToken: null }; }
+  } catch (error) {
+    console.error('Error fetching live archives:', error);
+    return { items: [], nextPageToken: null };
+  }
 };
 
+// --- ACTIVE LIVE ---
 export const fetchActiveLive = async (channelId) => {
   try {
     const response = await client.get('/search', {
@@ -85,7 +156,7 @@ export const fetchActiveLive = async (channelId) => {
       description: item.snippet.description,
       kind: 'live'
     }));
-  } catch (error) { console.error('Error fetching active live streams:', error); return []; }
+  } catch (error) { return []; }
 };
 
 // --- PLAYLISTS ---
@@ -104,7 +175,7 @@ export const fetchChannelPlaylists = async (channelId, pageToken = '') => {
       kind: 'playlist'
     }));
     return { items, nextPageToken: response.data.nextPageToken };
-  } catch (error) { console.error('Error fetching playlists:', error); return { items: [], nextPageToken: null }; }
+  } catch (error) { return { items: [], nextPageToken: null }; }
 };
 
 export const fetchPlaylistItems = async (playlistId, pageToken = '') => {
@@ -123,7 +194,7 @@ export const fetchPlaylistItems = async (playlistId, pageToken = '') => {
       kind: 'video'
     }));
     return { items, nextPageToken: response.data.nextPageToken };
-  } catch (error) { console.error('Error fetching playlist items:', error); return { items: [], nextPageToken: null }; }
+  } catch (error) { return { items: [], nextPageToken: null }; }
 };
 
 export const fetchPlaylistDetails = async (playlistId) => {
@@ -133,8 +204,7 @@ export const fetchPlaylistDetails = async (playlistId) => {
   } catch (error) { return null; }
 }
 
-// --- DETAILS, COMMENTS & LIVE CHAT ---
-
+// --- DETAILS & EXTRAS ---
 export const fetchVideoDetails = async (videoId) => {
   try {
     const response = await client.get('/videos', {
@@ -160,16 +230,12 @@ export const fetchComments = async (videoId) => {
   } catch (error) { return []; }
 }
 
-// Fetch Live Chat
 export const fetchLiveChatMessages = async (liveChatId) => {
   try {
     const response = await client.get('/liveChat/messages', {
-      params: {
-        liveChatId,
-        part: 'snippet,authorDetails',
-        maxResults: 10 // don't overwhelm
-      }
+      params: { liveChatId, part: 'snippet,authorDetails', maxResults: 10 }
     });
+    if (!response.data.items) return []; // Safety
     return response.data.items.map(item => ({
       id: item.id,
       author: item.authorDetails.displayName,
@@ -177,8 +243,5 @@ export const fetchLiveChatMessages = async (liveChatId) => {
       authorImage: item.authorDetails.profileImageUrl,
       publishedAt: item.snippet.publishedAt
     }));
-  } catch (error) {
-    console.error("Error fetching live chat", error);
-    return [];
-  }
+  } catch (error) { return []; }
 }

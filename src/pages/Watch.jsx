@@ -22,7 +22,7 @@ const Watch = () => {
     const [showDescription, setShowDescription] = useState(false);
 
     // Player & Live Chat State
-    const [playerState, setPlayerState] = useState(-1); // -1: unstarted
+    const [playerState, setPlayerState] = useState(-1);
     const [showLiveChat, setShowLiveChat] = useState(true);
     const [liveChatMessages, setLiveChatMessages] = useState([]);
     const [liveChatId, setLiveChatId] = useState(null);
@@ -32,9 +32,11 @@ const Watch = () => {
             const vidDetails = await fetchVideoDetails(id);
             setDetails(vidDetails);
 
-            // Check for Live Chat
+            // Check for Live Chat (Only if active chat ID exists)
             if (vidDetails?.liveStreamingDetails?.activeLiveChatId) {
                 setLiveChatId(vidDetails.liveStreamingDetails.activeLiveChatId);
+            } else {
+                setLiveChatId(null);
             }
 
             // Standard Comments & AI
@@ -60,7 +62,7 @@ const Watch = () => {
 
     // Live Chat Polling
     useEffect(() => {
-        if (liveChatId && showLiveChat && playerState === 1) { // 1 = Playing
+        if (liveChatId && showLiveChat && playerState === 1) {
             startChatPolling();
         } else {
             stopChatPolling();
@@ -69,10 +71,9 @@ const Watch = () => {
 
     const startChatPolling = () => {
         if (chatIntervalRef.current) return;
-        // Poll every 10s to be safe on quota
         chatIntervalRef.current = setInterval(async () => {
             const msgs = await fetchLiveChatMessages(liveChatId);
-            if (msgs.length > 0) setLiveChatMessages(msgs); // In real app, you'd append/dedupe
+            if (msgs.length > 0) setLiveChatMessages(msgs);
         }, 10000);
     };
 
@@ -86,7 +87,7 @@ const Watch = () => {
     // Tracking Logic
     const onStateChange = (event) => {
         setPlayerState(event.data);
-        if (event.data === 1) startTracking(); // Playing
+        if (event.data === 1) startTracking();
         else stopTracking();
     };
 
@@ -103,10 +104,9 @@ const Watch = () => {
     const handleResume = () => playerRef.current?.playVideo();
     const handleReplay = () => { playerRef.current?.seekTo(0); playerRef.current?.playVideo(); };
 
-    // External Download
+    // External Download (Updated to SSYouTube)
     const handleDownload = () => {
-        // Open a reputable external downloader in new tab
-        window.open(`https://www.y2mate.com/youtube/${id}`, '_blank');
+        window.open(`https://ssyoutube.com/watch?v=${id}`, '_blank');
     };
 
     return (
@@ -171,7 +171,6 @@ const Watch = () => {
                         pointerEvents: 'auto'
                     }}>
                         <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="scrollbar-hide">
-                            {liveChatMessages.length === 0 && <div style={{ fontSize: '12px', color: '#a1a1aa' }}>Connecting to chat...</div>}
                             {liveChatMessages.map(msg => (
                                 <div key={msg.id} style={{ fontSize: '13px', textShadow: '0 1px 2px black' }}>
                                     <span style={{ fontWeight: 'bold', color: '#a1a1aa', marginRight: '6px' }}>{msg.author}:</span>
