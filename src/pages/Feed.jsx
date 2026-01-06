@@ -1,83 +1,67 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CHANNELS, fetchChannelVideos, fetchLiveArchives, fetchActiveLive } from '../services/youtube';
+import { CHANNELS, fetchChannelVideos, fetchLiveArchives, fetchActiveLive, fetchChannelPlaylists } from '../services/youtube';
 import VideoCard from '../components/VideoCard';
+import PlaylistCard from '../components/PlaylistCard';
 
 const Feed = () => {
     const [activeChannel, setActiveChannel] = useState('ALL');
-    const [activeTab, setActiveTab] = useState('ALL_CONTENT'); // ALL_CONTENT, VIDEOS, LIVE
+    const [activeTab, setActiveTab] = useState('ALL_CONTENT'); // ALL_CONTENT, VIDEOS, LIVE, PLAYLISTS
 
-    const [videos, setVideos] = useState([]);
-    const [pageToken, setPageToken] = useState(null); // Token for the next page
+    const [items, setItems] = useState([]);
+    const [pageToken, setPageToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
     const navigate = useNavigate();
 
-    // Helper to determine which channels to query
     const getTargetChannels = useCallback(() => {
         return activeChannel === 'ALL'
             ? Object.values(CHANNELS)
             : Object.values(CHANNELS).filter(c => c.name === activeChannel);
     }, [activeChannel]);
 
-    // Initial Data Load (Reset)
     useEffect(() => {
         const loadInitial = async () => {
             setLoading(true);
-            setVideos([]);
+            setItems([]);
             setPageToken(null);
 
             const channels = getTargetChannels();
             let combinedItems = [];
-            let nextTokens = {}; // Store tokens per channel if needed, for simplicity we might just grab the first valid one or parallel fetch
 
             try {
                 const promises = channels.map(async (channel) => {
-                    let results = [];
-
-                    // Fetch Logic based on Tab
+                    // LIVE TAB 
                     if (activeTab === 'LIVE') {
-                        // 1. Get Active Live (Always show these at top)
                         const active = await fetchActiveLive(channel.id);
-                        // 2. Get Past Live (Archives)
                         const { items: past, nextPageToken } = await fetchLiveArchives(channel.id);
-                        results = [...active, ...past];
-
-                        // We only handle pagination for single channel roughly or complex merge
-                        return { items: results, token: nextPageToken };
-                    } else {
-                        // VIDEOS or ALL (Defaulting 'ALL' to just Videos stream for now to keep it clean, or mix?)
-                        // The user wants "Video Section" and "Live Section". 
-                        // Let's treat 'ALL_CONTENT' as 'VIDEOS' for pagination simplicity, or just mix.
-                        // Defaulting ALL -> Videos + maybe show separate Live section? 
-                        // Simplified: ALL_CONTENT = Videos Tab logic (Standard uploads)
-
+                        return { items: [...active, ...past], token: nextPageToken };
+                    }
+                    // PLAYLISTS TAB
+                    else if (activeTab === 'PLAYLISTS') {
+                        const { items, nextPageToken } = await fetchChannelPlaylists(channel.id);
+                        return { items, token: nextPageToken };
+                    }
+                    // VIDEOS TAB (or ALL_CONTENT default)
+                    else {
                         const { items, nextPageToken } = await fetchChannelVideos(channel.id);
                         return { items, token: nextPageToken };
                     }
                 });
 
                 const responses = await Promise.all(promises);
+                responses.forEach(r => combinedItems = [...combinedItems, ...r.items]);
 
-                // Merge
-                responses.forEach(r => {
-                    combinedItems = [...combinedItems, ...r.items];
-                });
+                if (channels.length === 1) setPageToken(responses[0].token);
+                else setPageToken(null);
 
-                // Store one of the tokens for pagination (Naive implementation for multi-channel: just uses the first channel's token if single channel selected. 
-                // Real multi-channel pagination is complex; we will disable specific "Load More" for 'ALL' channels if it gets too messy, 
-                // OR just save the tokens map. For this scope, we'll try to support it if single channel, otherwise just first page.)
-                if (channels.length === 1) {
-                    setPageToken(responses[0].token);
-                } else {
-                    setPageToken(null); // Disable pagination for 'All Channels' view to prevent complexity or API chaos
+                // Sort by date only if NOT playlists (playlists don't always have publishedAt in a useful way for sorting mixed content)
+                if (activeTab !== 'PLAYLISTS') {
+                    combinedItems.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
                 }
 
-                // Sort by date
-                combinedItems.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-
-                setVideos(combinedItems);
+                setItems(combinedItems);
             } catch (err) {
                 console.error("Failed to load content", err);
             } finally {
@@ -88,73 +72,40 @@ const Feed = () => {
         loadInitial();
     }, [activeChannel, activeTab, getTargetChannels]);
 
-    // Load More Handler
     const handleLoadMore = async () => {
         if (!pageToken || loadingMore) return;
         setLoadingMore(true);
-
         const channels = getTargetChannels();
-        // Only support single channel pagination reliably for now
         const channel = channels[0];
 
         try {
-            let newItems = [];
-            let newToken = null;
+            let newResult = { items: [], nextPageToken: null };
 
-            if (activeTab === 'LIVE') {
-                const result = await fetchLiveArchives(channel.id, pageToken);
-                newItems = result.items;
-                newToken = result.nextPageToken;
-            } else {
-                const result = await fetchChannelVideos(channel.id, pageToken);
-                newItems = result.items;
-                newToken = result.nextPageToken;
-            }
+            if (activeTab === 'LIVE') newResult = await fetchLiveArchives(channel.id, pageToken);
+            else if (activeTab === 'PLAYLISTS') newResult = await fetchChannelPlaylists(channel.id, pageToken);
+            else newResult = await fetchChannelVideos(channel.id, pageToken);
 
-            setVideos(prev => [...prev, ...newItems]);
-            setPageToken(newToken);
-        } catch (err) {
-            console.error("Failed to load more", err);
-        } finally {
-            setLoadingMore(false);
-        }
+            setItems(prev => [...prev, ...newResult.items]);
+            setPageToken(newResult.nextPageToken);
+        } catch (err) { console.error("Failed to load more", err); }
+        finally { setLoadingMore(false); }
     };
 
     return (
         <div style={{ paddingBottom: '40px' }}>
-            {/* Mobile Design: Stacked filters */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                 {/* Channel Filters */}
                 <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="scrollbar-hide">
-                    <FilterButton
-                        active={activeChannel === 'ALL'}
-                        onClick={() => setActiveChannel('ALL')}
-                        label="All Channels"
-                    />
-                    <FilterButton
-                        active={activeChannel === CHANNELS.PW_JEE.name}
-                        onClick={() => setActiveChannel(CHANNELS.PW_JEE.name)}
-                        label="Physics Wallah JEE"
-                    />
-                    <FilterButton
-                        active={activeChannel === CHANNELS.XYLEM.name}
-                        onClick={() => setActiveChannel(CHANNELS.XYLEM.name)}
-                        label="Xylem JEE"
-                    />
+                    <FilterButton active={activeChannel === 'ALL'} onClick={() => setActiveChannel('ALL')} label="All Channels" />
+                    <FilterButton active={activeChannel === CHANNELS.PW_JEE.name} onClick={() => setActiveChannel(CHANNELS.PW_JEE.name)} label="Physics Wallah JEE" />
+                    <FilterButton active={activeChannel === CHANNELS.XYLEM.name} onClick={() => setActiveChannel(CHANNELS.XYLEM.name)} label="Xylem JEE" />
                 </div>
 
                 {/* Content Type Tabs */}
-                <div style={{ borderBottom: '1px solid #333', display: 'flex', gap: '24px' }}>
-                    <TabButton
-                        active={activeTab === 'ALL_CONTENT'}
-                        onClick={() => setActiveTab('ALL_CONTENT')}
-                        label="Videos"
-                    />
-                    <TabButton
-                        active={activeTab === 'LIVE'}
-                        onClick={() => setActiveTab('LIVE')}
-                        label="Live"
-                    />
+                <div style={{ borderBottom: '1px solid #333', display: 'flex', gap: '24px', overflowX: 'auto' }}>
+                    <TabButton active={activeTab === 'ALL_CONTENT'} onClick={() => setActiveTab('ALL_CONTENT')} label="Videos" />
+                    <TabButton active={activeTab === 'LIVE'} onClick={() => setActiveTab('LIVE')} label="Live" />
+                    <TabButton active={activeTab === 'PLAYLISTS'} onClick={() => setActiveTab('PLAYLISTS')} label="Playlists" />
                 </div>
             </div>
 
@@ -168,39 +119,31 @@ const Feed = () => {
                         gap: '24px',
                         '@media (max-width: 600px)': { gridTemplateColumns: '1fr' }
                     }}>
-                        {videos.map(video => (
-                            <VideoCard
-                                key={video.id}
-                                video={video}
-                                onClick={() => navigate(`/watch/${video.id}`)}
-                            />
-                        ))}
+                        {items.map(item => {
+                            if (item.kind === 'playlist') {
+                                return <PlaylistCard key={item.id} playlist={item} onClick={() => navigate(`/playlist/${item.id}`)} />;
+                            } else {
+                                return <VideoCard key={item.id} video={item} onClick={() => navigate(`/watch/${item.id}`)} />;
+                            }
+                        })}
                     </div>
 
-                    {/* Load More Button - Only shows if we have a token (Single Channel Mode mostly) */}
+                    {items.length === 0 && !loading && (
+                        <div style={{ textAlign: 'center', color: '#555', marginTop: '40px' }}>No content found.</div>
+                    )}
+
                     {pageToken && (
                         <div style={{ textAlign: 'center', marginTop: '40px' }}>
                             <button
                                 onClick={handleLoadMore}
                                 disabled={loadingMore}
                                 style={{
-                                    background: '#2a2a35',
-                                    border: '1px solid #3f3f46',
-                                    color: 'white',
-                                    padding: '12px 32px',
-                                    borderRadius: '24px',
-                                    cursor: loadingMore ? 'wait' : 'pointer',
-                                    transition: 'background 0.2s'
+                                    background: '#2a2a35', border: '1px solid #3f3f46', color: 'white',
+                                    padding: '12px 32px', borderRadius: '24px', cursor: loadingMore ? 'wait' : 'pointer'
                                 }}
                             >
                                 {loadingMore ? 'Loading...' : 'Load More'}
                             </button>
-                        </div>
-                    )}
-
-                    {!pageToken && activeChannel !== 'ALL' && videos.length > 0 && (
-                        <div style={{ textAlign: 'center', marginTop: '40px', color: '#555' }}>
-                            You've reached the end.
                         </div>
                     )}
                 </>
@@ -209,44 +152,19 @@ const Feed = () => {
     );
 };
 
-// Sub-components
 const FilterButton = ({ active, onClick, label }) => (
-    <button
-        onClick={onClick}
-        style={{
-            padding: '8px 16px',
-            borderRadius: '20px',
-            border: active ? '1px solid #646cff' : '1px solid #333',
-            background: active ? '#646cff22' : 'transparent',
-            color: active ? '#646cff' : '#a1a1aa',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 500,
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s',
-            flexShrink: 0
-        }}
-    >
-        {label}
-    </button>
+    <button onClick={onClick} style={{
+        padding: '8px 16px', borderRadius: '20px', border: active ? '1px solid #646cff' : '1px solid #333',
+        background: active ? '#646cff22' : 'transparent', color: active ? '#646cff' : '#a1a1aa',
+        cursor: 'pointer', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0
+    }}>{label}</button>
 );
 
 const TabButton = ({ active, onClick, label }) => (
-    <button
-        onClick={onClick}
-        style={{
-            background: 'transparent',
-            border: 'none',
-            borderBottom: active ? '2px solid #646cff' : '2px solid transparent',
-            color: active ? 'white' : '#71717a',
-            padding: '8px 12px',
-            cursor: 'pointer',
-            fontWeight: active ? '600' : '400',
-            fontSize: '15px'
-        }}
-    >
-        {label}
-    </button>
+    <button onClick={onClick} style={{
+        background: 'transparent', border: 'none', borderBottom: active ? '2px solid #646cff' : '2px solid transparent',
+        color: active ? 'white' : '#71717a', padding: '8px 12px', cursor: 'pointer', fontWeight: active ? '600' : '400', fontSize: '15px', whiteSpace: 'nowrap'
+    }}>{label}</button>
 );
 
 export default Feed;
