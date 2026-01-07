@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { FaYoutube } from 'react-icons/fa';
+import { FcGoogle } from 'react-icons/fc';
 
 const LandingPage = () => {
     const { login, isLoading } = useAuth();
@@ -46,10 +47,12 @@ const LandingPage = () => {
                     alignItems: 'center',
                     gap: '12px',
                     transition: 'transform 0.2s, box-shadow 0.2s',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    minWidth: '250px',
+                    justifyContent: 'center'
                 }}
             >
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: '24px' }} />
+                <FcGoogle size={24} />
                 {isLoading ? 'Signing in...' : 'Sign in with Google'}
             </button>
         </div>
