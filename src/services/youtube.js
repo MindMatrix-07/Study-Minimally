@@ -255,7 +255,7 @@ export const fetchVideoDetails = async (videoId) => {
 export const fetchComments = async (videoId) => {
   try {
     const response = await client.get('/commentThreads', {
-      params: { videoId, part: 'snippet', maxResults: 30, order: 'relevance' }
+      params: { videoId, part: 'snippet', maxResults: 20 }
     });
     return response.data.items.map(item => ({
       id: item.id,
@@ -265,7 +265,10 @@ export const fetchComments = async (videoId) => {
       publishedAt: item.snippet.topLevelComment.snippet.publishedAt,
       authorImage: item.snippet.topLevelComment.snippet.authorProfileImageUrl
     }));
-  } catch (error) { return []; }
+  } catch (error) {
+    console.error("Failed to fetch comments:", error.response?.data || error); // Added logging
+    return [];
+  }
 }
 
 export const fetchLiveChatMessages = async (liveChatId) => {
