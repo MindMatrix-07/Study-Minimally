@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { googleLogout, useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { setAccessToken as setServiceToken } from '../services/youtube';
 
 const AuthContext = createContext(null);
 
@@ -12,8 +13,10 @@ export const AuthProvider = ({ children }) => {
     // Login function
     const login = useGoogleLogin({
         onSuccess: (codeResponse) => {
-            setAccessToken(codeResponse.access_token);
-            fetchUserProfile(codeResponse.access_token);
+            const token = codeResponse.access_token;
+            setAccessToken(token);
+            setServiceToken(token); // UPDATE SERVICE
+            fetchUserProfile(token);
         },
         onError: (error) => console.log('Login Failed:', error),
         scope: 'https://www.googleapis.com/auth/youtube.readonly'
@@ -44,6 +47,7 @@ export const AuthProvider = ({ children }) => {
         googleLogout();
         setUser(null);
         setAccessToken(null);
+        setServiceToken(null); // CLEAR SERVICE
         localStorage.removeItem('user_profile');
         localStorage.removeItem('access_token');
     };
@@ -55,6 +59,7 @@ export const AuthProvider = ({ children }) => {
         if (storedUser && storedToken) {
             setUser(JSON.parse(storedUser));
             setAccessToken(storedToken);
+            setServiceToken(storedToken); // RESTORE SERVICE
         }
     }, []);
 
