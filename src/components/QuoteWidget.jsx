@@ -24,9 +24,9 @@ const QuoteWidget = () => {
     return (
         <div style={{
             padding: '20px',
-            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+            backgroundColor: 'var(--bg-secondary)',
             borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--border-color)',
             margin: '20px 0',
             textAlign: 'center',
             position: 'relative',
@@ -40,7 +40,7 @@ const QuoteWidget = () => {
                     right: '10px',
                     background: 'transparent',
                     border: 'none',
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: 'var(--text-secondary)',
                     cursor: 'pointer',
                     transition: 'transform 0.3s ease'
                 }}
@@ -56,7 +56,7 @@ const QuoteWidget = () => {
                 <p style={{
                     fontSize: '1.1rem',
                     fontStyle: 'italic',
-                    color: '#e2e8f0',
+                    color: 'var(--text-primary)',
                     marginBottom: '10px',
                     fontFamily: '"Georgia", serif',
                     lineHeight: '1.6'
@@ -65,7 +65,7 @@ const QuoteWidget = () => {
                 </p>
                 <p style={{
                     fontSize: '0.9rem',
-                    color: '#94a3b8',
+                    color: 'var(--text-secondary)',
                     fontWeight: '500',
                     letterSpacing: '0.5px'
                 }}>

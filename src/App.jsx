@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import Feed from './pages/Feed';
 import Watch from './pages/Watch';
@@ -23,46 +24,48 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={CLIENT_ID}>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Feed />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/watch/:id" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Watch />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/playlist/:id" element={
-              <ProtectedRoute>
-                <Layout>
-                  <PlaylistView />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/analytics" element={
-              <ProtectedRoute>
-                <Layout>
-                  <AnalyticsPage />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/history" element={
-              <ProtectedRoute>
-                <Layout>
-                  <HistoryPage />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+        <ThemeProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Feed />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/watch/:id" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Watch />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/playlist/:id" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PlaylistView />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AnalyticsPage />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/history" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <HistoryPage />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </ThemeProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );

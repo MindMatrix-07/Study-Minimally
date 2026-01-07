@@ -23,6 +23,16 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root.light {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --accent: #0284c7;
+  --border-color: rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+}
+
 body {
   margin: 0;
   min-width: 320px;
