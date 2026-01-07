@@ -22,7 +22,7 @@ const LandingPage = () => {
                     <FaYoutube size={64} color="#38bdf8" />
                 </div>
                 <h1 style={{ fontSize: '3rem', fontWeight: '800', margin: '0 0 16px 0', background: 'linear-gradient(to right, #f1f5f9, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Study Space
+                    Study-Minimally
                 </h1>
                 <p style={{ fontSize: '1.2rem', color: '#94a3b8', maxWidth: '500px', lineHeight: '1.6' }}>
                     A minimal, distraction-free environment for focused learning.

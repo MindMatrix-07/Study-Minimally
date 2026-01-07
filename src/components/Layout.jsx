@@ -39,7 +39,7 @@ const Layout = ({ children }) => {
                             WebkitTextFillColor: 'transparent',
                             letterSpacing: '-0.5px'
                         }}>
-                            Study Space
+                            Study-Minimally
                         </span>
                     </div>
 
