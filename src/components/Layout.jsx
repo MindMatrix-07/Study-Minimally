@@ -55,7 +55,7 @@ const Layout = ({ children }) => {
                             WebkitTextFillColor: 'transparent',
                             letterSpacing: '-0.5px'
                         }}>
-                            Study-Minimally
+                            Study-Minimally.
                         </span>
                     </div>
 

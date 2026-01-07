@@ -60,6 +60,12 @@ export const getDateFilter = (filterType) => {
     after = new Date('2024-01-01'); before = new Date('2025-01-01');
   } else if (filterType === 'YEAR_2023') {
     after = new Date('2023-01-01'); before = new Date('2024-01-01');
+  } else if (filterType === 'YEAR_2022') {
+    after = new Date('2022-01-01'); before = new Date('2023-01-01');
+  } else if (filterType === 'YEAR_2021') {
+    after = new Date('2021-01-01'); before = new Date('2022-01-01');
+  } else if (filterType === 'YEAR_2020') {
+    after = new Date('2020-01-01'); before = new Date('2021-01-01');
   } else {
     return null;
   }

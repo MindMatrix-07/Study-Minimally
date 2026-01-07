@@ -123,6 +123,9 @@ const Feed = () => {
                                 <option value="YEAR_2025">2025</option>
                                 <option value="YEAR_2024">2024</option>
                                 <option value="YEAR_2023">2023</option>
+                                <option value="YEAR_2022">2022</option>
+                                <option value="YEAR_2021">2021</option>
+                                <option value="YEAR_2020">2020</option>
                             </select>
                         )}
 

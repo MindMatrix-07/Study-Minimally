@@ -158,7 +158,6 @@ const Watch = () => {
                             <span style={{ color: 'white' }}>{details?.snippet?.channelTitle}</span>
                             <span>{details?.statistics?.viewCount ? parseInt(details.statistics.viewCount).toLocaleString() : 0} views</span>
                         </div>
-                        <button onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px' }}><FaDownload /> Download</button>
                     </div>
 
                     <div style={{ background: 'transparent', padding: '16px', borderRadius: '12px', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>

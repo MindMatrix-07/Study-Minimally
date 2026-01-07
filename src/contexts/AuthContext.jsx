@@ -6,8 +6,16 @@ import { setAccessToken as setServiceToken } from '../services/youtube';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [accessToken, setAccessToken] = useState(null);
+    // Lazy initialization from localStorage to prevent refresh flicker
+    const [user, setUser] = useState(() => {
+        const storedUser = localStorage.getItem('user_profile');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
+    const [accessToken, setAccessToken] = useState(() => {
+        const storedToken = localStorage.getItem('access_token');
+        if (storedToken) setServiceToken(storedToken); // Ensure service has token immediately
+        return storedToken || null;
+    });
     const [isLoading, setIsLoading] = useState(false);
 
     // Login function
@@ -51,17 +59,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user_profile');
         localStorage.removeItem('access_token');
     };
-
-    // Restore session on load
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user_profile');
-        const storedToken = localStorage.getItem('access_token');
-        if (storedUser && storedToken) {
-            setUser(JSON.parse(storedUser));
-            setAccessToken(storedToken);
-            setServiceToken(storedToken); // RESTORE SERVICE
-        }
-    }, []);
 
     return (
         <AuthContext.Provider value={{ user, accessToken, login, logOut, isLoading }}>
