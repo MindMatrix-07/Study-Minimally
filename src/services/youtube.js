@@ -252,7 +252,7 @@ export const fetchPlaylistDetails = async (playlistId) => {
 export const fetchVideoDetails = async (videoId) => {
   try {
     const response = await client.get('/videos', {
-      params: { id: videoId, part: 'snippet,statistics,liveStreamingDetails' }
+      params: { id: videoId, part: 'snippet,statistics,liveStreamingDetails,contentDetails' }
     });
     return response.data.items[0];
   } catch (error) { return null; }

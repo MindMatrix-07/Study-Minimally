@@ -1,12 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import YouTube from 'react-youtube';
-import { FaArrowLeft, FaRobot, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeSlash, FaDownload } from 'react-icons/fa';
+import { FaArrowLeft, FaRobot, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeSlash } from 'react-icons/fa';
 import { trackHeartbeat } from '../services/tracker';
 import { fetchVideoDetails, fetchComments, fetchLiveChatMessages } from '../services/youtube';
 import { analyzeComments } from '../services/gemini';
-import { addToHistory } from '../services/history'; // Added import
+import { addToHistory } from '../services/history';
 import { formatDistanceToNow } from 'date-fns';
+import NotesPanel from '../components/NotesPanel';
 
 const Watch = () => {
     const { id } = useParams();
@@ -20,6 +21,7 @@ const Watch = () => {
     const [aiAnalysis, setAiAnalysis] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
     const [showDescription, setShowDescription] = useState(false);
+    const [duration, setDuration] = useState('');
 
     const [playerState, setPlayerState] = useState(-1);
     const [showLiveChat, setShowLiveChat] = useState(true);
@@ -30,7 +32,8 @@ const Watch = () => {
         const loadData = async () => {
             const vidDetails = await fetchVideoDetails(id);
             setDetails(vidDetails);
-            if (vidDetails) { // Add to history when details are loaded
+            if (vidDetails) {
+                // Add to history
                 addToHistory({
                     id: vidDetails.id,
                     title: vidDetails.snippet.title,
@@ -38,6 +41,19 @@ const Watch = () => {
                     channelTitle: vidDetails.snippet.channelTitle,
                     publishedAt: vidDetails.snippet.publishedAt
                 });
+
+                // Format Duration
+                if (vidDetails.contentDetails?.duration) {
+                    const dur = vidDetails.contentDetails.duration.replace('PT', '').replace('H', 'h ').replace('M', 'm ').replace('S', 's');
+                    setDuration(dur);
+                }
+
+                // Save Last Watched for "Continue Watching"
+                localStorage.setItem('last_watched_video', JSON.stringify({
+                    id: vidDetails.id,
+                    title: vidDetails.snippet.title,
+                    timestamp: Date.now()
+                }));
             }
             if (vidDetails?.liveStreamingDetails?.activeLiveChatId) setLiveChatId(vidDetails.liveStreamingDetails.activeLiveChatId);
             else setLiveChatId(null);
@@ -84,14 +100,15 @@ const Watch = () => {
     const stopTracking = () => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } };
     const handleResume = () => playerRef.current?.playVideo();
     const handleReplay = () => { playerRef.current?.seekTo(0); playerRef.current?.playVideo(); };
-    const handleDownload = () => window.open(`https://ssyoutube.com/watch?v=${id}`, '_blank');
+
+    const getCurrentTime = () => playerRef.current?.getCurrentTime() || 0;
 
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '40px' }}>
             <button
                 onClick={() => navigate(-1)}
                 style={{
-                    background: 'transparent', border: 'none', color: '#a1a1aa',
+                    background: 'transparent', border: 'none', color: 'var(--text-secondary)',
                     display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '16px', fontSize: '16px'
                 }}
             >
@@ -149,59 +166,66 @@ const Watch = () => {
                 )}
             </div>
 
-            {/* Layout Class Applied Here */}
             <div className="watch-layout">
                 <div>
-                    <h1 style={{ fontSize: '20px', margin: '0 0 12px 0', lineHeight: 1.4 }}>{details?.snippet?.title || 'Loading...'}</h1>
+                    <h1 style={{ fontSize: '20px', margin: '0 0 12px 0', lineHeight: 1.4, color: 'var(--text-primary)' }}>
+                        {details?.snippet?.title || 'Loading...'}
+                        {duration && <span style={{ fontSize: '14px', color: 'var(--accent)', marginLeft: '12px', background: 'rgba(56, 189, 248, 0.1)', padding: '2px 8px', borderRadius: '4px', verticalAlign: 'middle' }}>{duration}</span>}
+                    </h1>
+
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                        <div style={{ display: 'flex', gap: '16px', color: '#a1a1aa', fontSize: '14px' }}>
-                            <span style={{ color: 'white' }}>{details?.snippet?.channelTitle}</span>
+                        <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                            <span style={{ color: 'var(--text-primary)' }}>{details?.snippet?.channelTitle}</span>
                             <span>{details?.statistics?.viewCount ? parseInt(details.statistics.viewCount).toLocaleString() : 0} views</span>
                         </div>
                     </div>
 
-                    <div style={{ background: 'transparent', padding: '16px', borderRadius: '12px', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#d4d4d8', whiteSpace: 'pre-wrap', maxHeight: showDescription ? 'none' : '100px', overflow: 'hidden' }}>{details?.snippet?.description}</div>
-                        <button onClick={() => setShowDescription(!showDescription)} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', marginTop: '8px', cursor: 'pointer', fontSize: '13px' }}>{showDescription ? 'Show Less' : 'Show More'}</button>
+                    <div style={{ background: 'transparent', padding: '16px', borderRadius: '12px', marginBottom: '32px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', maxHeight: showDescription ? 'none' : '100px', overflow: 'hidden' }}>{details?.snippet?.description}</div>
+                        <button onClick={() => setShowDescription(!showDescription)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', marginTop: '8px', cursor: 'pointer', fontSize: '13px' }}>{showDescription ? 'Show Less' : 'Show More'}</button>
+                    </div>
+
+                    <div style={{ marginBottom: '32px' }}>
+                        <NotesPanel videoId={id} getCurrentTime={getCurrentTime} />
                     </div>
 
                     <div>
-                        <h3 style={{ fontSize: '18px', marginBottom: '16px' }}>Comments</h3>
+                        <h3 style={{ fontSize: '18px', marginBottom: '16px', color: 'var(--text-primary)' }}>Comments</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {comments.map(comment => (
                                 <div key={comment.id} style={{ display: 'flex', gap: '12px' }}>
                                     <img src={comment.authorImage} alt={comment.author} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                                     <div>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '4px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: '600' }}>{comment.author}</span>
-                                            <span style={{ fontSize: '11px', color: '#71717a' }}>{formatDistanceToNow(new Date(comment.publishedAt), { addSuffix: true })}</span>
+                                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{comment.author}</span>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{formatDistanceToNow(new Date(comment.publishedAt), { addSuffix: true })}</span>
                                         </div>
-                                        <div style={{ fontSize: '14px', lineHeight: '1.5', color: '#d4d4d8' }} dangerouslySetInnerHTML={{ __html: comment.text }} />
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '12px', color: '#71717a' }}><FaThumbsUp /> {comment.likeCount}</div>
+                                        <div style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--text-secondary)' }} dangerouslySetInnerHTML={{ __html: comment.text }} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}><FaThumbsUp /> {comment.likeCount}</div>
                                     </div>
                                 </div>
                             ))}
-                            {comments.length === 0 && <div style={{ color: '#71717a', fontStyle: 'italic' }}>No comments found.</div>}
+                            {comments.length === 0 && <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No comments found.</div>}
                         </div>
                     </div>
                 </div>
 
-                <div style={{ background: 'rgba(56, 189, 248, 0.03)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(56, 189, 248, 0.1)', position: 'sticky', top: '24px' }}>
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-color)', position: 'sticky', top: '24px', width: '350px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#818cf8' }}><FaRobot size={20} /><h3 style={{ margin: 0, fontSize: '16px' }}>AI Highlights</h3></div>
-                    {analyzing ? <div style={{ color: '#a1a1aa', fontSize: '14px', fontStyle: 'italic' }}>Thinking...</div> : aiAnalysis ? (
+                    {analyzing ? <div style={{ color: 'var(--text-secondary)', fontSize: '14px', fontStyle: 'italic' }}>Thinking...</div> : aiAnalysis ? (
                         <div>
-                            <p style={{ fontSize: '14px', lineHeight: '1.5', color: '#e4e4e7', marginBottom: '20px', fontStyle: 'italic' }}>"{aiAnalysis.summary}"</p>
+                            <p style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--text-primary)', marginBottom: '20px', fontStyle: 'italic' }}>"{aiAnalysis.summary}"</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px', color: '#a1a1aa' }}>TOP INSIGHTS</label>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>TOP INSIGHTS</label>
                                 {aiAnalysis.highlights.map((h, i) => (
                                     <div key={i} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '13px', color: '#fff', marginBottom: '4px' }}>{h.text}</div>
-                                        <div style={{ fontSize: '11px', color: '#a1a1aa' }}>— {h.author}</div>
+                                        <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '4px' }}>{h.text}</div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>— {h.author}</div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                    ) : <div style={{ color: '#a1a1aa', fontSize: '14px' }}>Failed to load analysis.</div>}
+                    ) : <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Failed to load analysis.</div>}
                 </div>
             </div>
         </div>

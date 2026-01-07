@@ -13,6 +13,7 @@ const Layout = ({ children }) => {
     const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const [lastWatched, setLastWatched] = useState(null);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -33,6 +34,31 @@ const Layout = ({ children }) => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Continue Watching Logic
+    useEffect(() => {
+        const checkLastWatched = () => {
+            const stored = localStorage.getItem('last_watched_video');
+            if (stored) {
+                const data = JSON.parse(stored);
+                // Only show if < 24 hours old and we are NOT on the watch page for that video
+                if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000 &&
+                    !window.location.pathname.includes(data.id)) {
+                    setLastWatched(data);
+
+                    // Hide after 10 seconds
+                    setTimeout(() => {
+                        setLastWatched(null);
+                    }, 10000);
+                }
+            }
+        };
+
+        // Check on mount
+        checkLastWatched();
+
+        // Optional: Listen for route changes to re-check (if user navigates back to feed)
+    }, [window.location.pathname]); // Simple dependency on path change
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', transition: 'background-color 0.3s, color 0.3s' }}>
@@ -200,6 +226,55 @@ const Layout = ({ children }) => {
                 <QuoteWidget />
                 {children}
             </main>
+
+            {/* Continue Watching Floating Button */}
+            {lastWatched && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '30px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: 'var(--surface-card)', // Assuming variable or fallback
+                    background: 'rgba(15, 23, 42, 0.95)',
+                    border: '1px solid var(--accent)',
+                    borderRadius: '50px',
+                    padding: '12px 24px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                    zIndex: 2000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    animation: 'slideUp 0.5s ease-out'
+                }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Continue Watching</span>
+                        <span style={{ fontSize: '13px', color: 'var(--text-primary)', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lastWatched.title}</span>
+                    </div>
+                    <button
+                        onClick={() => navigate(`/watch/${lastWatched.id}`)}
+                        style={{
+                            background: 'var(--accent)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <FaPlay size={10} />
+                    </button>
+                    <button
+                        onClick={() => setLastWatched(null)}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: '4px' }}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
