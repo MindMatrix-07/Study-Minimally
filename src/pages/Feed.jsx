@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CHANNELS, fetchChannelVideos, fetchLiveArchives, fetchActiveLive, fetchChannelPlaylists } from '../services/youtube';
 import VideoCard from '../components/VideoCard';
 import PlaylistCard from '../components/PlaylistCard';
@@ -14,7 +14,10 @@ const Feed = () => {
     const [pageToken, setPageToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
+
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const searchQuery = searchParams.get('q') || '';
 
     const getTargetChannels = useCallback(() => {
         return activeChannel === 'ALL' ? Object.values(CHANNELS) : Object.values(CHANNELS).filter(c => c.name === activeChannel);
@@ -29,29 +32,40 @@ const Feed = () => {
             let combinedItems = [];
             try {
                 const promises = channels.map(async (channel) => {
+                    // Search Logic: If query exists, search within channel
                     if (activeTab === 'LIVE') {
-                        const active = await fetchActiveLive(channel.id);
-                        const { items: past, nextPageToken } = await fetchLiveArchives(channel.id, '', dateFilter);
+                        let active = [];
+                        if (!searchQuery) active = await fetchActiveLive(channel.id); // Only fetch active live if no search (search endpoint handles both otherwise? Actually active live is separate)
+                        // Actually better to just search for completed live events if searching
+                        const { items: past, nextPageToken } = await fetchLiveArchives(channel.id, '', dateFilter, searchQuery);
                         return { items: [...active, ...past], token: nextPageToken };
                     } else if (activeTab === 'PLAYLISTS') {
+                        // Playlists don't support search/date filter easily in this implementation without deep changes, skipping for now
+                        if (searchQuery) return { items: [], token: null }; // Should ideally filter locally or use search type=playlist
                         const { items, nextPageToken } = await fetchChannelPlaylists(channel.id);
                         return { items, token: nextPageToken };
                     } else {
-                        const { items, nextPageToken } = await fetchChannelVideos(channel.id, '', dateFilter);
+                        const { items, nextPageToken } = await fetchChannelVideos(channel.id, '', dateFilter, searchQuery);
                         return { items, token: nextPageToken };
                     }
                 });
                 const responses = await Promise.all(promises);
                 responses.forEach(r => combinedItems = [...combinedItems, ...r.items]);
+
+                // If only one channel, we can support pagination token (roughly)
                 if (channels.length === 1) setPageToken(responses[0].token);
                 else setPageToken(null);
+
+                // Sort by date if not searching/filtering by relevance (default API order is date, but combined needs sort)
+                // If searching, API provided relevance or date? logic in youtube.js says order: 'date'.
                 if (activeTab !== 'PLAYLISTS') combinedItems.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
                 setItems(combinedItems);
             } catch (err) { console.error("Failed to load content", err); }
             finally { setLoading(false); }
         };
         loadInitial();
-    }, [activeChannel, activeTab, dateFilter, getTargetChannels]);
+    }, [activeChannel, activeTab, dateFilter, getTargetChannels, searchQuery]);
 
     const handleLoadMore = async () => {
         if (!pageToken || loadingMore) return;
@@ -59,9 +73,9 @@ const Feed = () => {
         const channel = getTargetChannels()[0];
         try {
             let newResult = { items: [], nextPageToken: null };
-            if (activeTab === 'LIVE') newResult = await fetchLiveArchives(channel.id, pageToken, dateFilter);
+            if (activeTab === 'LIVE') newResult = await fetchLiveArchives(channel.id, pageToken, dateFilter, searchQuery);
             else if (activeTab === 'PLAYLISTS') newResult = await fetchChannelPlaylists(channel.id, pageToken);
-            else newResult = await fetchChannelVideos(channel.id, pageToken, dateFilter);
+            else newResult = await fetchChannelVideos(channel.id, pageToken, dateFilter, searchQuery);
             setItems(prev => [...prev, ...newResult.items]);
             setPageToken(newResult.nextPageToken);
         } catch (err) { console.error("Failed to load more", err); }
@@ -70,6 +84,12 @@ const Feed = () => {
 
     return (
         <div style={{ paddingBottom: '40px' }}>
+            {searchQuery && (
+                <div style={{ marginBottom: '20px', fontSize: '1.2rem', color: '#e2e8f0' }}>
+                    Results for "<span style={{ fontWeight: 'bold', color: '#38bdf8' }}>{searchQuery}</span>"
+                </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                 {/* Channel Filters */}
                 <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="scrollbar-hide">
@@ -96,9 +116,13 @@ const Feed = () => {
                                 style={{ background: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer' }}
                             >
                                 <option value="ALL">Any Time</option>
-                                <option value="WEEK">This Week</option>
-                                <option value="MONTH">This Month</option>
-                                <option value="YEAR">This Year</option>
+                                <option value="LAST_WEEK">Last Week</option>
+                                <option value="LAST_MONTH">Last Month</option>
+                                <option value="LAST_YEAR">Last Year</option>
+                                <option value="LAST_2_YEARS">Last 2 Years</option>
+                                <option value="YEAR_2025">2025</option>
+                                <option value="YEAR_2024">2024</option>
+                                <option value="YEAR_2023">2023</option>
                             </select>
                         )}
 

@@ -5,6 +5,7 @@ import { FaArrowLeft, FaRobot, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeS
 import { trackHeartbeat } from '../services/tracker';
 import { fetchVideoDetails, fetchComments, fetchLiveChatMessages } from '../services/youtube';
 import { analyzeComments } from '../services/gemini';
+import { addToHistory } from '../services/history'; // Added import
 import { formatDistanceToNow } from 'date-fns';
 
 const Watch = () => {
@@ -29,6 +30,15 @@ const Watch = () => {
         const loadData = async () => {
             const vidDetails = await fetchVideoDetails(id);
             setDetails(vidDetails);
+            if (vidDetails) { // Add to history when details are loaded
+                addToHistory({
+                    id: vidDetails.id,
+                    title: vidDetails.snippet.title,
+                    thumbnail: vidDetails.snippet.thumbnails.high?.url,
+                    channelTitle: vidDetails.snippet.channelTitle,
+                    publishedAt: vidDetails.snippet.publishedAt
+                });
+            }
             if (vidDetails?.liveStreamingDetails?.activeLiveChatId) setLiveChatId(vidDetails.liveStreamingDetails.activeLiveChatId);
             else setLiveChatId(null);
 
