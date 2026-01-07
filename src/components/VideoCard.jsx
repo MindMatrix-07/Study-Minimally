@@ -13,13 +13,14 @@ const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
             className={isList ? 'video-card-list' : ''}
             style={{
                 cursor: 'pointer',
-                backgroundColor: '#1a1a1e',
+                backgroundColor: 'transparent',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
                 display: isList ? 'flex' : 'block',
                 gap: isList ? '16px' : '0',
                 height: isList ? '140px' : 'auto',
+                transition: 'border-color 0.2s'
             }}
         >
             <div

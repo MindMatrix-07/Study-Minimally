@@ -93,7 +93,7 @@ const Feed = () => {
                             <select
                                 value={dateFilter}
                                 onChange={(e) => setDateFilter(e.target.value)}
-                                style={{ background: '#1a1a1e', color: '#a1a1aa', border: '1px solid #333', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer' }}
+                                style={{ background: 'transparent', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer' }}
                             >
                                 <option value="ALL">Any Time</option>
                                 <option value="WEEK">This Week</option>
@@ -102,9 +102,9 @@ const Feed = () => {
                             </select>
                         )}
 
-                        <div style={{ display: 'flex', background: '#1a1a1e', borderRadius: '8px', padding: '2px' }}>
-                            <button onClick={() => setViewMode('grid')} style={{ padding: '6px', background: viewMode === 'grid' ? '#3f3f46' : 'transparent', border: 'none', color: viewMode === 'grid' ? 'white' : '#71717a', borderRadius: '6px', cursor: 'pointer' }}><FaThLarge size={14} /></button>
-                            <button onClick={() => setViewMode('list')} style={{ padding: '6px', background: viewMode === 'list' ? '#3f3f46' : 'transparent', border: 'none', color: viewMode === 'list' ? 'white' : '#71717a', borderRadius: '6px', cursor: 'pointer' }}><FaList size={14} /></button>
+                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '2px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <button onClick={() => setViewMode('grid')} style={{ padding: '6px', background: viewMode === 'grid' ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: viewMode === 'grid' ? '#fff' : '#64748b', borderRadius: '6px', cursor: 'pointer' }}><FaThLarge size={14} /></button>
+                            <button onClick={() => setViewMode('list')} style={{ padding: '6px', background: viewMode === 'list' ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: viewMode === 'list' ? '#fff' : '#64748b', borderRadius: '6px', cursor: 'pointer' }}><FaList size={14} /></button>
                         </div>
                     </div>
                 </div>

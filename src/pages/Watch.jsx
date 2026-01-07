@@ -151,7 +151,7 @@ const Watch = () => {
                         <button onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px' }}><FaDownload /> Download</button>
                     </div>
 
-                    <div style={{ background: '#1a1a1e', padding: '16px', borderRadius: '12px', marginBottom: '32px' }}>
+                    <div style={{ background: 'transparent', padding: '16px', borderRadius: '12px', marginBottom: '32px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#d4d4d8', whiteSpace: 'pre-wrap', maxHeight: showDescription ? 'none' : '100px', overflow: 'hidden' }}>{details?.snippet?.description}</div>
                         <button onClick={() => setShowDescription(!showDescription)} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', marginTop: '8px', cursor: 'pointer', fontSize: '13px' }}>{showDescription ? 'Show Less' : 'Show More'}</button>
                     </div>
@@ -177,7 +177,7 @@ const Watch = () => {
                     </div>
                 </div>
 
-                <div style={{ background: 'rgba(100, 108, 255, 0.05)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(100, 108, 255, 0.1)', position: 'sticky', top: '24px' }}>
+                <div style={{ background: 'rgba(56, 189, 248, 0.03)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(56, 189, 248, 0.1)', position: 'sticky', top: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#818cf8' }}><FaRobot size={20} /><h3 style={{ margin: 0, fontSize: '16px' }}>AI Highlights</h3></div>
                     {analyzing ? <div style={{ color: '#a1a1aa', fontSize: '14px', fontStyle: 'italic' }}>Thinking...</div> : aiAnalysis ? (
                         <div>
