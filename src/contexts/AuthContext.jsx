@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(() => {
         const storedUser = localStorage.getItem('user_profile');
         const storedExpiry = localStorage.getItem('token_expiry');
-        
+
         // Check if token is expired
         if (storedExpiry && Date.now() > parseInt(storedExpiry)) {
             localStorage.removeItem('user_profile');
@@ -18,8 +18,17 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('token_expiry');
             return null;
         }
-        
-        return storedUser ? JSON.parse(storedUser) : null;
+
+        if (storedUser) {
+            try {
+                return JSON.parse(storedUser);
+            } catch (e) {
+                console.error("Failed to parse user profile", e);
+                localStorage.removeItem('user_profile'); // Auto-heal
+                return null;
+            }
+        }
+        return null;
     });
     const [accessToken, setAccessToken] = useState(() => {
         const storedToken = localStorage.getItem('access_token');
@@ -40,15 +49,15 @@ export const AuthProvider = ({ children }) => {
         onSuccess: (codeResponse) => {
             const token = codeResponse.access_token;
             // Calculate expiry (expires_in is in seconds, usually 3599)
-            const expiresIn = codeResponse.expires_in || 3599; 
-            const expiryTime = Date.now() + (expiresIn * 1000); 
-            
+            const expiresIn = codeResponse.expires_in || 3599;
+            const expiryTime = Date.now() + (expiresIn * 1000);
+
             setAccessToken(token);
             setServiceToken(token); // UPDATE SERVICE
-            
+
             localStorage.setItem('access_token', token);
             localStorage.setItem('token_expiry', expiryTime.toString());
-            
+
             fetchUserProfile(token);
         },
         onError: (error) => console.log('Login Failed:', error),

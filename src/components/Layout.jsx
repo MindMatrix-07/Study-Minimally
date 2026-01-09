@@ -40,16 +40,21 @@ const Layout = ({ children }) => {
         const checkLastWatched = () => {
             const stored = localStorage.getItem('last_watched_video');
             if (stored) {
-                const data = JSON.parse(stored);
-                // Only show if < 24 hours old and we are NOT on the watch page for that video
-                if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000 &&
-                    !window.location.pathname.includes(data.id)) {
-                    setLastWatched(data);
+                try {
+                    const data = JSON.parse(stored);
+                    // Only show if < 24 hours old and we are NOT on the watch page for that video
+                    if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000 &&
+                        !window.location.pathname.includes(data.id)) {
+                        setLastWatched(data);
 
-                    // Hide after 10 seconds
-                    setTimeout(() => {
-                        setLastWatched(null);
-                    }, 10000);
+                        // Hide after 10 seconds
+                        setTimeout(() => {
+                            setLastWatched(null);
+                        }, 10000);
+                    }
+                } catch (e) {
+                    console.error("Corrupt history data", e);
+                    localStorage.removeItem('last_watched_video');
                 }
             }
         };
