@@ -14,6 +14,7 @@ const Feed = () => {
     const [pageToken, setPageToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [error, setError] = useState(null);
 
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -26,6 +27,7 @@ const Feed = () => {
     useEffect(() => {
         const loadInitial = async () => {
             setLoading(true);
+            setError(null);
             setItems([]);
             setPageToken(null);
             const channels = getTargetChannels();
@@ -61,7 +63,13 @@ const Feed = () => {
                 if (activeTab !== 'PLAYLISTS') combinedItems.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
                 setItems(combinedItems);
-            } catch (err) { console.error("Failed to load content", err); }
+            } catch (err) {
+                console.error("Failed to load content", err);
+                // Extract useful error message
+                const msg = err.response?.data?.error?.message || err.message || "Unknown error occurred";
+                const code = err.response?.status || "";
+                setError(`${code ? code + ': ' : ''}${msg}`);
+            }
             finally { setLoading(false); }
         };
         loadInitial();
@@ -78,12 +86,30 @@ const Feed = () => {
             else newResult = await fetchChannelVideos(channel.id, pageToken, dateFilter, searchQuery);
             setItems(prev => [...prev, ...newResult.items]);
             setPageToken(newResult.nextPageToken);
-        } catch (err) { console.error("Failed to load more", err); }
+        } catch (err) {
+            console.error("Failed to load more", err);
+            // Optional: show toast or snackbar for load more error
+        }
         finally { setLoadingMore(false); }
     };
 
     return (
         <div style={{ paddingBottom: '40px' }}>
+            {error && (
+                <div style={{
+                    padding: '16px',
+                    marginBottom: '20px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: '8px',
+                    color: '#fca5a5'
+                }}>
+                    <strong>Error Loading Content:</strong> {error}
+                    <div style={{ fontSize: '0.85em', marginTop: '4px', opacity: 0.8 }}>
+                        Please check your network connection or try logging out and back in.
+                    </div>
+                </div>
+            )}
             {searchQuery && (
                 <div style={{ marginBottom: '20px', fontSize: '1.2rem', color: '#e2e8f0' }}>
                     Results for "<span style={{ fontWeight: 'bold', color: '#38bdf8' }}>{searchQuery}</span>"

@@ -141,7 +141,7 @@ export const fetchChannelVideos = async (channelId, pageToken = '', dateFilter =
 
   } catch (error) {
     console.error('Error fetching videos:', error);
-    return { items: [], nextPageToken: null };
+    throw error; // Propagate error to be caught in Feed.jsx
   }
 };
 
@@ -179,7 +179,7 @@ export const fetchLiveArchives = async (channelId, pageToken = '', dateFilter = 
     return { items, nextPageToken: response.data.nextPageToken };
   } catch (error) {
     console.error('Error fetching live archives:', error);
-    return { items: [], nextPageToken: null };
+    throw error; // Propagate error
   }
 };
 
