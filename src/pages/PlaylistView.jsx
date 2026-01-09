@@ -49,17 +49,13 @@ const PlaylistView = () => {
                     <h1 style={{ fontSize: '24px', marginBottom: '8px' }}>{details?.snippet?.title}</h1>
                     <p style={{ color: '#a1a1aa', marginBottom: '32px' }}>{videos.length} videos</p>
 
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                        gap: '24px',
-                        '@media (max-width: 600px)': { gridTemplateColumns: '1fr' }
-                    }}>
+                    <div className="list-view-container">
                         {videos.map(video => (
                             <VideoCard
                                 key={video.id}
                                 video={video}
                                 onClick={() => navigate(`/watch/${video.id}`)}
+                                viewMode="list"
                             />
                         ))}
                     </div>

@@ -51,13 +51,16 @@ const HistoryPage = () => {
                     <p>No watch history yet. Start watching videos!</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            ): (
+                    <div className = "list-view-container">
                     {history.map((video) => (
-                        <VideoCard key={video.id} video={video} />
+            <VideoCard key={video.id} video={video} viewMode="list" />
                     ))}
-                </div>
-            )}
         </div>
+    )
+}
+            )}
+        </div >
     );
 };
 

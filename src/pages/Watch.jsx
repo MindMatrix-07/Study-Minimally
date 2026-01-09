@@ -18,6 +18,7 @@ const Watch = () => {
 
     const [details, setDetails] = useState(null);
     const [comments, setComments] = useState([]);
+    const [nextCommentToken, setNextCommentToken] = useState(null);
     const [showDescription, setShowDescription] = useState(false);
     const [duration, setDuration] = useState('');
 
@@ -66,12 +67,20 @@ const Watch = () => {
                 setLiveChatId(null);
             }
 
-            const fetchedComments = await fetchComments(id);
-            setComments(fetchedComments);
+            const { items, nextPageToken } = await fetchComments(id);
+            setComments(items);
+            setNextCommentToken(nextPageToken);
         };
         loadData();
         return () => { stopTracking(); stopChatPolling(); };
     }, [id]);
+
+    const handleLoadMoreComments = async () => {
+        if (!nextCommentToken) return;
+        const { items, nextPageToken } = await fetchComments(id, nextCommentToken);
+        setComments(prev => [...prev, ...items]);
+        setNextCommentToken(nextPageToken);
+    };
 
     useEffect(() => {
         if (liveChatId && showLiveChat) {
@@ -227,6 +236,25 @@ const Watch = () => {
                                 </div>
                             ))}
                             {comments.length === 0 && <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No comments found.</div>}
+
+                            {nextCommentToken && (
+                                <button
+                                    onClick={handleLoadMoreComments}
+                                    style={{
+                                        alignSelf: 'center',
+                                        marginTop: '10px',
+                                        background: 'transparent',
+                                        border: '1px solid var(--border-color)',
+                                        color: 'var(--text-primary)',
+                                        padding: '8px 24px',
+                                        borderRadius: '20px',
+                                        cursor: 'pointer',
+                                        fontSize: '13px'
+                                    }}
+                                >
+                                    Load more comments
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -258,12 +258,14 @@ export const fetchVideoDetails = async (videoId) => {
   } catch (error) { return null; }
 };
 
-export const fetchComments = async (videoId) => {
+export const fetchComments = async (videoId, pageToken = '') => {
   try {
-    const response = await client.get('/commentThreads', {
-      params: { videoId, part: 'snippet', maxResults: 20 }
-    });
-    return response.data.items.map(item => ({
+    const params = { videoId, part: 'snippet', maxResults: 20 };
+    if (pageToken) params.pageToken = pageToken;
+
+    const response = await client.get('/commentThreads', { params });
+
+    const items = response.data.items.map(item => ({
       id: item.id,
       author: item.snippet.topLevelComment.snippet.authorDisplayName,
       text: item.snippet.topLevelComment.snippet.textDisplay,
@@ -271,9 +273,11 @@ export const fetchComments = async (videoId) => {
       publishedAt: item.snippet.topLevelComment.snippet.publishedAt,
       authorImage: item.snippet.topLevelComment.snippet.authorProfileImageUrl
     }));
+
+    return { items, nextPageToken: response.data.nextPageToken };
   } catch (error) {
-    console.error("Failed to fetch comments:", error.response?.data || error); // Added logging
-    return [];
+    console.error("Failed to fetch comments:", error.response?.data || error);
+    return { items: [], nextPageToken: null };
   }
 }
 

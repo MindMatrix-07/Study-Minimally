@@ -8,7 +8,7 @@ import { FaThLarge, FaList } from 'react-icons/fa';
 const Feed = () => {
     const [activeChannel, setActiveChannel] = useState('ALL');
     const [activeTab, setActiveTab] = useState('ALL_CONTENT');
-    const [viewMode, setViewMode] = useState('grid');
+    const [viewMode, setViewMode] = useState('list');
     const [dateFilter, setDateFilter] = useState('ALL');
     const [items, setItems] = useState([]);
     const [pageToken, setPageToken] = useState(null);
