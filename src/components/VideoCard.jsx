@@ -27,7 +27,7 @@ const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
                 className={isList ? 'video-card-list-img' : ''}
                 style={{
                     position: 'relative',
-                    width: isList ? '240px' : '100%',
+                    width: isList ? 'clamp(120px, 30vw, 240px)' : '100%', // Responsive width for list mode
                     paddingTop: isList ? '0' : '56.25%',
                     height: isList ? '100%' : '0',
                     flexShrink: 0
@@ -36,7 +36,7 @@ const VideoCard = ({ video, onClick, viewMode = 'grid' }) => {
                     src={video.thumbnail}
                     alt={video.title}
                     style={{
-                        position: isList ? 'absolute' : 'absolute', // Always absolute for proper fill in forced aspect ratio containers
+                        position: isList ? 'absolute' : 'absolute',
                         top: 0,
                         left: 0,
                         width: '100%',

@@ -167,18 +167,22 @@ const Watch = () => {
                 )}
 
                 {/* Live Chat Overlay */}
-                {liveChatId && showLiveChat && (
+                {showLiveChat && (
                     <div style={{
-                        position: 'absolute', bottom: '20px', left: '20px', width: '300px', height: '400px',
-                        background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
-                        display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 25, pointerEvents: 'auto'
+                        position: 'absolute', bottom: '20px', left: '20px', width: '300px', height: '400px', maxHeight: '60%',
+                        background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 25, pointerEvents: 'auto',
+                        '@media (max-width: 600px)': { width: 'calc(100% - 40px)', bottom: '10px', left: '20px' }
                     }}>
                         <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Live Chat</span>
-                            <button onClick={() => setShowLiveChat(false)} style={{ background: 'transparent', border: 'none', color: '#ccc', cursor: 'pointer' }}>×</button>
+                            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>
+                                {liveChatId ? 'Live Chat' : 'Chat Offline'}
+                            </span>
+                            <button onClick={() => setShowLiveChat(false)} style={{ background: 'transparent', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '16px', padding: '0 8px' }}>×</button>
                         </div>
                         <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="scrollbar-hide">
-                            {liveChatMessages.length === 0 && <div style={{ color: '#aaa', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>Connecting to chat...</div>}
+                            {!liveChatId && <div style={{ color: '#aaa', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>Chat is currently unavailable for this video.</div>}
+                            {liveChatId && liveChatMessages.length === 0 && <div style={{ color: '#aaa', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>Connecting to chat...</div>}
                             {liveChatMessages.map((msg, idx) => (
                                 <div key={msg.id + idx} style={{ fontSize: '13px', textShadow: '0 1px 1px black' }}>
                                     <span style={{ fontWeight: 'bold', color: msg.author === details?.snippet?.channelTitle ? '#38bdf8' : '#a1a1aa', marginRight: '6px' }}>{msg.author}:</span>
@@ -189,10 +193,21 @@ const Watch = () => {
                     </div>
                 )}
 
-                {/* Show Chat Button */}
-                {liveChatId && !showLiveChat && (
-                    <button onClick={() => setShowLiveChat(true)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', zIndex: 25, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-                        <FaCommentDots /> Show Live Chat
+                {/* Show Chat Button - Always visible for live content or if ID exists */}
+                {((isLive || liveChatId) && !showLiveChat) && (
+                    <button
+                        onClick={() => setShowLiveChat(true)}
+                        style={{
+                            position: 'absolute', top: '20px', right: '20px',
+                            background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '20px', padding: '8px 16px', cursor: 'pointer',
+                            zIndex: 25, display: 'flex', alignItems: 'center', gap: '8px',
+                            fontSize: '13px', backdropFilter: 'blur(4px)',
+                            transition: 'background 0.2s'
+                        }}
+                    >
+                        <FaCommentDots />
+                        <span>Show Chat</span>
                     </button>
                 )}
             </div>
