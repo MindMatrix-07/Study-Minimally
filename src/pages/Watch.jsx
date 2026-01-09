@@ -194,20 +194,21 @@ const Watch = () => {
                 )}
 
                 {/* Show Chat Button - Always visible for live content or if ID exists */}
-                {((isLive || liveChatId) && !showLiveChat) && (
+                {/* Show Chat Button - Always visible if details loaded */}
+                {details && !showLiveChat && (
                     <button
                         onClick={() => setShowLiveChat(true)}
                         style={{
                             position: 'absolute', top: '20px', right: '20px',
                             background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.1)',
                             borderRadius: '20px', padding: '8px 16px', cursor: 'pointer',
-                            zIndex: 25, display: 'flex', alignItems: 'center', gap: '8px',
+                            zIndex: 100, display: 'flex', alignItems: 'center', gap: '8px',
                             fontSize: '13px', backdropFilter: 'blur(4px)',
                             transition: 'background 0.2s'
                         }}
                     >
                         <FaCommentDots />
-                        <span>Show Chat</span>
+                        <span>{liveChatId ? 'Live Chat' : 'Chat'}</span>
                     </button>
                 )}
             </div>
