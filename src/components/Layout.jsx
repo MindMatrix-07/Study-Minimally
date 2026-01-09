@@ -78,7 +78,7 @@ const Layout = ({ children }) => {
                 transition: 'background-color 0.3s'
             }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => navigate('/')}>
+                    <div className="desktop-only" style={{ alignItems: 'center', gap: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => navigate('/')}>
                         <FaYoutube color="var(--accent)" size={28} />
                         <span style={{
                             background: 'linear-gradient(to right, var(--text-primary), var(--text-secondary))',
@@ -252,6 +252,28 @@ const Layout = ({ children }) => {
                     </button>
                 </div>
             )}
+            {/* Mobile Footer for App Name */}
+            <div className="mobile-only" style={{
+                padding: '20px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '10px',
+                borderTop: '1px solid var(--border-color)',
+                marginTop: 'auto',
+                paddingBottom: '80px' // Space for floating buttons if any
+            }}>
+                <FaYoutube color="var(--accent)" size={24} />
+                <span style={{
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    background: 'linear-gradient(to right, var(--text-primary), var(--text-secondary))',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '-0.5px'
+                }}>
+                    Study-Minimally.
+                </span>
+            </div>
         </div>
     );
 };

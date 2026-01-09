@@ -145,4 +145,28 @@ button {
   .watch-layout {
     gap: 20px;
   }
+
+  .watch-layout {
+    gap: 20px;
+  }
+}
+
+/* Visibility Utilities */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: flex !important;
+  /* Assuming flex for the navbar items */
+}
+
+@media (max-width: 600px) {
+  .mobile-only {
+    display: flex !important;
+  }
+
+  .desktop-only {
+    display: none !important;
+  }
 }
