@@ -277,18 +277,28 @@ export const fetchComments = async (videoId) => {
   }
 }
 
-export const fetchLiveChatMessages = async (liveChatId) => {
+export const fetchLiveChatMessages = async (liveChatId, pageToken = '') => {
   try {
-    const response = await client.get('/liveChat/messages', {
-      params: { liveChatId, part: 'snippet,authorDetails', maxResults: 10 }
-    });
-    if (!response.data.items) return []; // Safety
-    return response.data.items.map(item => ({
+    const params = { liveChatId, part: 'snippet,authorDetails', maxResults: 50 }; // Increased maxResults for efficiency
+    if (pageToken) params.pageToken = pageToken;
+
+    const response = await client.get('/liveChat/messages', { params });
+
+    const items = response.data.items ? response.data.items.map(item => ({
       id: item.id,
       author: item.authorDetails.displayName,
       message: item.snippet.displayMessage,
       authorImage: item.authorDetails.profileImageUrl,
       publishedAt: item.snippet.publishedAt
-    }));
-  } catch (error) { return []; }
+    })) : [];
+
+    return {
+      items,
+      nextPageToken: response.data.nextPageToken,
+      pollingIntervalMillis: response.data.pollingIntervalMillis || 10000
+    };
+  } catch (error) {
+    console.warn("Live chat fetch error:", error);
+    return { items: [], nextPageToken: pageToken, pollingIntervalMillis: 15000 }; // Retry same token after 15s
+  }
 }

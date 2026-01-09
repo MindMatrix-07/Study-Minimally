@@ -26,11 +26,27 @@
 :root.light {
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --text-primary: #000000;
+  /* Pure black text for light mode */
+  --text-secondary: #333333;
+  /* Darker grey for secondary text */
   --accent: #0284c7;
   --border-color: rgba(0, 0, 0, 0.1);
+  --nav-bg: rgba(255, 255, 255, 0.85);
   color-scheme: light;
+}
+
+:root.amoled {
+  --bg-primary: #000000;
+  /* Pure black */
+  --bg-secondary: #0f172a;
+  /* Very dark blue/grey for contrast */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --accent: #38bdf8;
+  --border-color: rgba(255, 255, 255, 0.15);
+  --nav-bg: rgba(0, 0, 0, 0.85);
+  color-scheme: dark;
 }
 
 body {

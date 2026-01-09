@@ -67,16 +67,16 @@ const Layout = ({ children }) => {
                 top: 0,
                 zIndex: 100,
                 backdropFilter: 'blur(16px)',
-                backgroundColor: theme === 'dark' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+                backgroundColor: 'var(--nav-bg)', // Use CSS variable
                 borderBottom: '1px solid var(--border-color)',
                 padding: '0 24px',
                 transition: 'background-color 0.3s'
             }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '20px', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => navigate('/')}>
-                        <FaYoutube color="#38bdf8" size={28} />
+                        <FaYoutube color="var(--accent)" size={28} />
                         <span style={{
-                            background: 'linear-gradient(to right, #f1f5f9, #94a3b8)',
+                            background: 'linear-gradient(to right, var(--text-primary), var(--text-secondary))',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             letterSpacing: '-0.5px'
@@ -85,8 +85,9 @@ const Layout = ({ children }) => {
                         </span>
                     </div>
 
-                    {/* Search Bar */}
-                    <form onSubmit={handleSearch} style={{ flex: 1, maxWidth: '500px', margin: '0 32px' }}>
+                    {/* Search Bar - Hidden on very small mobile if needed, or styled better */}
+                    <form onSubmit={handleSearch} style={{ flex: 1, maxWidth: '500px', margin: '0 32px', display: window.innerWidth < 600 ? 'none' : 'block' }}>
+                        {/* Note: In a real app we'd use CSS module or media query for display:none, checking window.innerWidth here is just a quick patch for the structure. Better to leave it flexible or use className. Let's stick to style but allow shrinking. */}
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                             <input
                                 type="text"
@@ -95,11 +96,11 @@ const Layout = ({ children }) => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 style={{
                                     width: '100%',
-                                    background: 'var(--bg-secondary)', // Use variable
-                                    border: '1px solid var(--border-color)', // Use variable
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '50px',
                                     padding: '10px 20px 10px 40px',
-                                    color: 'var(--text-primary)', // Use variable
+                                    color: 'var(--text-primary)',
                                     fontSize: '0.95rem',
                                     outline: 'none',
                                     transition: 'background-color 0.3s, color 0.3s, border-color 0.3s'
@@ -108,44 +109,15 @@ const Layout = ({ children }) => {
                             <FaSearch style={{ position: 'absolute', left: '16px', color: 'var(--text-secondary)' }} />
                         </div>
                     </form>
+                    {/* Search Icon for Mobile (Simple prompt) */}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                        <NavLink
-                            to="/"
-                            style={({ isActive }) => ({
-                                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                textDecoration: 'none',
-                                fontWeight: 500,
-                                fontSize: '0.95rem',
-                                transition: 'color 0.2s'
-                            })}
-                        >
-                            Feed
-                        </NavLink>
-                        <NavLink
-                            to="/history"
-                            style={({ isActive }) => ({
-                                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                textDecoration: 'none',
-                                fontWeight: 500,
-                                fontSize: '0.95rem',
-                                transition: 'color 0.2s'
-                            })}
-                        >
-                            History
-                        </NavLink>
-                        <NavLink
-                            to="/analytics"
-                            style={({ isActive }) => ({
-                                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                textDecoration: 'none',
-                                fontWeight: 500,
-                                fontSize: '0.95rem',
-                                transition: 'color 0.2s'
-                            })}
-                        >
-                            Analytics
-                        </NavLink>
+                        <div className="desktop-links" style={{ display: 'flex', gap: '24px' }}>
+                            {/* Add css class later for mobile hiding if needed */}
+                            <NavLink to="/" style={({ isActive }) => ({ color: isActive ? 'var(--accent)' : 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem', transition: 'color 0.2s' })}>Feed</NavLink>
+                            <NavLink to="/history" style={({ isActive }) => ({ color: isActive ? 'var(--accent)' : 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem', transition: 'color 0.2s' })}>History</NavLink>
+                            <NavLink to="/analytics" style={({ isActive }) => ({ color: isActive ? 'var(--accent)' : 'var(--text-secondary)', textDecoration: 'none', fontWeight: 500, fontSize: '0.95rem', transition: 'color 0.2s' })}>Analytics</NavLink>
+                        </div>
 
                         {/* User Profile Dropdown */}
                         {user && (
@@ -156,7 +128,7 @@ const Layout = ({ children }) => {
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                     style={{
                                         width: '36px', height: '36px', borderRadius: '50%',
-                                        border: '2px solid rgba(56, 189, 248, 0.3)', cursor: 'pointer',
+                                        border: '2px solid var(--border-color)', cursor: 'pointer', // Changed border color
                                         transition: 'transform 0.2s'
                                     }}
                                     title={user.name}
@@ -171,7 +143,7 @@ const Layout = ({ children }) => {
                                         backgroundColor: 'var(--bg-secondary)',
                                         border: '1px solid var(--border-color)',
                                         borderRadius: '12px',
-                                        boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.5)', // Increased shadow
                                         padding: '8px',
                                         zIndex: 1000,
                                         overflow: 'hidden'
@@ -182,7 +154,7 @@ const Layout = ({ children }) => {
                                         </div>
 
                                         <button
-                                            onClick={() => { toggleTheme(); setIsDropdownOpen(false); }}
+                                            onClick={() => { toggleTheme(); }}
                                             style={{
                                                 display: 'flex', alignItems: 'center', gap: '12px',
                                                 width: '100%', padding: '10px 16px',
@@ -195,8 +167,8 @@ const Layout = ({ children }) => {
                                             onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.05)'}
                                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                         >
-                                            {theme === 'dark' ? <FaSun color="#fbbf24" /> : <FaMoon color="#64748b" />}
-                                            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                                            {theme === 'light' ? <FaSun color="#fbbf24" /> : theme === 'dark' ? <FaMoon color="#64748b" /> : <FaMoon color="white" />}
+                                            {theme === 'light' ? 'Light Mode' : theme === 'dark' ? 'Dark Mode' : 'AMOLED Mode'}
                                         </button>
 
                                         <button

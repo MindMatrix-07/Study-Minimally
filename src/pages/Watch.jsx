@@ -1,10 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import YouTube from 'react-youtube';
-import { FaArrowLeft, FaRobot, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeSlash } from 'react-icons/fa';
+import { FaArrowLeft, FaThumbsUp, FaCommentDots, FaPlay, FaRedo, FaEyeSlash } from 'react-icons/fa';
 import { trackHeartbeat } from '../services/tracker';
 import { fetchVideoDetails, fetchComments, fetchLiveChatMessages } from '../services/youtube';
-import { analyzeComments } from '../services/gemini';
 import { addToHistory } from '../services/history';
 import { formatDistanceToNow } from 'date-fns';
 import NotesPanel from '../components/NotesPanel';
@@ -14,19 +13,19 @@ const Watch = () => {
     const navigate = useNavigate();
     const playerRef = useRef(null);
     const intervalRef = useRef(null);
-    const chatIntervalRef = useRef(null);
+    const chatTimeoutRef = useRef(null); // Changed to timeout for dynamic polling
+    const chatPageTokenRef = useRef('');
 
     const [details, setDetails] = useState(null);
     const [comments, setComments] = useState([]);
-    const [aiAnalysis, setAiAnalysis] = useState(null);
-    const [analyzing, setAnalyzing] = useState(false);
     const [showDescription, setShowDescription] = useState(false);
     const [duration, setDuration] = useState('');
 
     const [playerState, setPlayerState] = useState(-1);
-    const [showLiveChat, setShowLiveChat] = useState(true);
+    const [showLiveChat, setShowLiveChat] = useState(false); // Default false to save quota
     const [liveChatMessages, setLiveChatMessages] = useState([]);
     const [liveChatId, setLiveChatId] = useState(null);
+    const [isLive, setIsLive] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -48,47 +47,63 @@ const Watch = () => {
                     setDuration(dur);
                 }
 
-                // Save Last Watched for "Continue Watching"
+                // Check if Live
+                if (vidDetails.snippet.liveBroadcastContent === 'live') {
+                    setIsLive(true);
+                }
+
+                // Save Last Watched
                 localStorage.setItem('last_watched_video', JSON.stringify({
                     id: vidDetails.id,
                     title: vidDetails.snippet.title,
                     timestamp: Date.now()
                 }));
             }
-            if (vidDetails?.liveStreamingDetails?.activeLiveChatId) setLiveChatId(vidDetails.liveStreamingDetails.activeLiveChatId);
-            else setLiveChatId(null);
 
-            setAnalyzing(true);
+            if (vidDetails?.liveStreamingDetails?.activeLiveChatId) {
+                setLiveChatId(vidDetails.liveStreamingDetails.activeLiveChatId);
+            } else {
+                setLiveChatId(null);
+            }
+
             const fetchedComments = await fetchComments(id);
             setComments(fetchedComments);
-
-            if (fetchedComments.length > 0) {
-                const analysis = await analyzeComments(fetchedComments);
-                setAiAnalysis(analysis);
-            } else {
-                setAiAnalysis({ summary: "No comments to analyze.", highlights: [] });
-            }
-            setAnalyzing(false);
         };
         loadData();
         return () => { stopTracking(); stopChatPolling(); };
     }, [id]);
 
     useEffect(() => {
-        if (liveChatId && showLiveChat && playerState === 1) startChatPolling();
-        else stopChatPolling();
-    }, [liveChatId, showLiveChat, playerState]);
+        if (liveChatId && showLiveChat) {
+            chatPageTokenRef.current = ''; // Reset token when opening chat
+            pollChat();
+        } else {
+            stopChatPolling();
+        }
+    }, [liveChatId, showLiveChat]);
 
-    const startChatPolling = () => {
-        if (chatIntervalRef.current) return;
-        chatIntervalRef.current = setInterval(async () => {
-            const msgs = await fetchLiveChatMessages(liveChatId);
-            if (msgs.length > 0) setLiveChatMessages(msgs);
-        }, 10000);
+    const pollChat = async () => {
+        if (!liveChatId || !showLiveChat) return;
+
+        const { items, nextPageToken, pollingIntervalMillis } = await fetchLiveChatMessages(liveChatId, chatPageTokenRef.current);
+
+        if (items && items.length > 0) {
+            setLiveChatMessages(prev => [...prev.slice(-50), ...items]); // Keep last 50 messages
+        }
+
+        if (nextPageToken) {
+            chatPageTokenRef.current = nextPageToken;
+        }
+
+        // Schedule next poll
+        chatTimeoutRef.current = setTimeout(pollChat, Math.max(pollingIntervalMillis, 5000)); // Min 5s
     };
 
     const stopChatPolling = () => {
-        if (chatIntervalRef.current) { clearInterval(chatIntervalRef.current); chatIntervalRef.current = null; }
+        if (chatTimeoutRef.current) {
+            clearTimeout(chatTimeoutRef.current);
+            chatTimeoutRef.current = null;
+        }
     };
 
     const onStateChange = (event) => {
@@ -142,16 +157,22 @@ const Watch = () => {
                     </div>
                 )}
 
+                {/* Live Chat Overlay */}
                 {liveChatId && showLiveChat && (
                     <div style={{
-                        position: 'absolute', bottom: '20px', left: '20px', width: '300px', maxHeight: '200px',
-                        background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(4px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
-                        display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 10, pointerEvents: 'auto'
+                        position: 'absolute', bottom: '20px', left: '20px', width: '300px', height: '400px',
+                        background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(10px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
+                        display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 25, pointerEvents: 'auto'
                     }}>
+                        <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Live Chat</span>
+                            <button onClick={() => setShowLiveChat(false)} style={{ background: 'transparent', border: 'none', color: '#ccc', cursor: 'pointer' }}>×</button>
+                        </div>
                         <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }} className="scrollbar-hide">
-                            {liveChatMessages.map(msg => (
-                                <div key={msg.id} style={{ fontSize: '13px', textShadow: '0 1px 2px black' }}>
-                                    <span style={{ fontWeight: 'bold', color: '#a1a1aa', marginRight: '6px' }}>{msg.author}:</span>
+                            {liveChatMessages.length === 0 && <div style={{ color: '#aaa', fontSize: '13px', textAlign: 'center', marginTop: '20px' }}>Connecting to chat...</div>}
+                            {liveChatMessages.map((msg, idx) => (
+                                <div key={msg.id + idx} style={{ fontSize: '13px', textShadow: '0 1px 1px black' }}>
+                                    <span style={{ fontWeight: 'bold', color: msg.author === details?.snippet?.channelTitle ? '#38bdf8' : '#a1a1aa', marginRight: '6px' }}>{msg.author}:</span>
                                     <span style={{ color: 'white' }}>{msg.message}</span>
                                 </div>
                             ))}
@@ -159,9 +180,10 @@ const Watch = () => {
                     </div>
                 )}
 
-                {liveChatId && (
-                    <button onClick={() => setShowLiveChat(!showLiveChat)} style={{ position: 'absolute', top: '20px', right: '20px', background: showLiveChat ? 'rgba(100, 108, 255, 0.9)' : 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', zIndex: 25, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-                        <FaCommentDots /> {showLiveChat ? 'Hide Chat' : 'Show Chat'}
+                {/* Show Chat Button */}
+                {liveChatId && !showLiveChat && (
+                    <button onClick={() => setShowLiveChat(true)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', zIndex: 25, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+                        <FaCommentDots /> Show Live Chat
                     </button>
                 )}
             </div>
@@ -176,7 +198,6 @@ const Watch = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
                         <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)', fontSize: '14px' }}>
                             <span style={{ color: 'var(--text-primary)' }}>{details?.snippet?.channelTitle}</span>
-                            <span>{details?.statistics?.viewCount ? parseInt(details.statistics.viewCount).toLocaleString() : 0} views</span>
                         </div>
                     </div>
 
@@ -210,22 +231,46 @@ const Watch = () => {
                     </div>
                 </div>
 
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-color)', position: 'sticky', top: '24px', width: '350px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#818cf8' }}><FaRobot size={20} /><h3 style={{ margin: 0, fontSize: '16px' }}>AI Highlights</h3></div>
-                    {analyzing ? <div style={{ color: 'var(--text-secondary)', fontSize: '14px', fontStyle: 'italic' }}>Thinking...</div> : aiAnalysis ? (
+                {/* Stats Panel (Replaces AI) */}
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: '16px', padding: '24px', border: '1px solid var(--border-color)', position: 'sticky', top: '24px', width: '350px' }}>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>Video Stats</h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div>
-                            <p style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--text-primary)', marginBottom: '20px', fontStyle: 'italic' }}>"{aiAnalysis.summary}"</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <label style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>TOP INSIGHTS</label>
-                                {aiAnalysis.highlights.map((h, i) => (
-                                    <div key={i} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '13px', color: 'var(--text-primary)', marginBottom: '4px' }}>{h.text}</div>
-                                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>— {h.author}</div>
-                                    </div>
-                                ))}
+                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Views</span>
+                            <span style={{ fontSize: '20px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                {details?.statistics?.viewCount ? parseInt(details.statistics.viewCount).toLocaleString() : '—'}
+                            </span>
+                        </div>
+
+                        <div>
+                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Likes</span>
+                            <span style={{ fontSize: '20px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                {details?.statistics?.likeCount ? parseInt(details.statistics.likeCount).toLocaleString() : '—'}
+                            </span>
+                        </div>
+
+                        <div>
+                            <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Uploaded</span>
+                            <span style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
+                                {details?.snippet?.publishedAt ? new Date(details.snippet.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                            </span>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                {details?.snippet?.publishedAt ? formatDistanceToNow(new Date(details.snippet.publishedAt), { addSuffix: true }) : ''}
                             </div>
                         </div>
-                    ) : <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Failed to load analysis.</div>}
+
+                        {details?.snippet?.tags && details.snippet.tags.length > 0 && (
+                            <div>
+                                <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tags</span>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {details.snippet.tags.slice(0, 5).map(tag => (
+                                        <span key={tag} style={{ background: 'rgba(56, 189, 248, 0.1)', color: 'var(--accent)', fontSize: '11px', padding: '4px 8px', borderRadius: '4px' }}>#{tag}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
