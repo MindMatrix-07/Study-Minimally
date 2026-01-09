@@ -19,7 +19,7 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
-  const CLIENT_ID = '261529708094-stj7s44m4sv17hgka5hapmbsf2jbm1cc.apps.googleusercontent.com';
+  const CLIENT_ID = '198532975376-bbee4l3j7sqbksb1bp9iftk0pmbn5cb0.apps.googleusercontent.com';
 
   return (
     <GoogleOAuthProvider clientId={CLIENT_ID}>
